@@ -26,7 +26,6 @@ float** kmeans_clustering(float **feature, float threshold, int *membership)
 
     int     *initial;
     int      initial_points;
-    int      c = 0;
 
     if (nclusters > npoints)
         nclusters = npoints;
@@ -78,7 +77,6 @@ float** kmeans_clustering(float **feature, float threshold, int *membership)
             }
             new_centers_len[i] = 0;
         }
-        c++;
         if (delta < threshold)
             break;
     } while ((loop++ < 500));
@@ -163,7 +161,6 @@ int setup(int argc, char **argv) {
 	
 	srand(7);
 	memcpy(features[0], buf, npoints*nfeatures*sizeof(float));
-	free(buf);
 
 	struct timeval tvalBefore, tvalAfter;
     gettimeofday (&tvalBefore, NULL);
@@ -186,8 +183,5 @@ int setup(int argc, char **argv) {
         ((tvalAfter.tv_sec - tvalBefore.tv_sec)*1000000L
         +tvalAfter.tv_usec) - tvalBefore.tv_usec
         );
-
-	free(features[0]);
-	free(features);    
     return(0);
 }
