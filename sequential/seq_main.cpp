@@ -26,7 +26,7 @@ static float cal_dist(float *coord1, float *coord2)
     return(ans);
 }
 
-static int find_nearest_cluster(int num_clusters, int num_dim, float  *object,
+static int closest_cluster(int num_clusters, int num_dim, float  *object,
                          float **clusters)
 {
     int   index = 0;
@@ -90,10 +90,10 @@ float** seq_kmeans(int num_dim, int num_objs, int num_clusters,
     do {
         delta = 0;
         for (int i = 0; i < num_objs; i++) {
-            index = find_nearest_cluster(num_clusters, num_dim, objects[i],
+            index = closest_cluster(num_clusters, num_dim, objects[i],
                                          clusters);
             if (relationship[i] != index) 
-                delta += 1.0;
+                delta++;
 
             relationship[i] = index;
 
