@@ -9,30 +9,34 @@
 
 #include "kmeans.h"
 
-int numdims = 0;
+int     numdims = 0;
+float **objects;
 
-static float euclid_dist_2(float *coord1, float *coord2)
+static float cal_dist(float *coord1, float *coord2)
 {
     int     i;
     float   ans = 0.0;
 
-    for (i=0; i<numdims; i++)
-        ans += (coord1[i]-coord2[i]) * (coord1[i]-coord2[i]);
+    for (i=0; i<numdims; i++) {
+
+        float temp = (coord1[i]-coord2[i]) * (coord1[i]-coord2[i]);
+        ans += temp;
+    }
 
     return(ans);
 }
 
-static int find_nearest_cluster(int numClusters, int numCoords, float  *object,
+static int find_nearest_cluster(int num_clusters, int num_dim, float  *object,
                          float **clusters)
 {
     int   index = 0;
     float dist, min_dist;
 
-    numdims  = numCoords;
-    min_dist = euclid_dist_2(object, clusters[0]);
+    numdims  = num_dim;
+    min_dist = cal_dist(object, clusters[0]);
 
-    for (int i = 1; i < numClusters; i++) {
-        dist = euclid_dist_2(object, clusters[i]);
+    for (int i = 1; i < num_clusters; i++) {
+        dist = cal_dist(object, clusters[i]);
         if (dist >= min_dist) {
             continue;
         }
@@ -45,87 +49,94 @@ static int find_nearest_cluster(int numClusters, int numCoords, float  *object,
     return (index);
 }
 
-float** seq_kmeans(float **objects, int numCoords, int numObjs, int numClusters, 
-        int    *membership)
+float** seq_kmeans(int num_dim, int num_objs, int num_clusters, 
+        int    *relationship)
 {
-    int      i, j, index, loop=0;
-    int     *newClusterSize;
+    int     index, cnt = 0;
+    int     *num_current_cluster;
     
     float threshold = 0.001;
 
     float    delta;
     float  **clusters;
-    float  **newClusters;
+    float  **curr_cluster;
 
-    clusters    = (float**) malloc(numClusters * sizeof(float*));
-    clusters[0] = (float*)  malloc(numClusters * numCoords * sizeof(float));
+    int i; 
+
+    clusters    = (float**) malloc(num_clusters * sizeof(float*));
+    clusters[0] = (float*)  malloc(num_clusters * num_dim * sizeof(float));
    
-    for (i=1; i<numClusters; i++)
-        clusters[i] = clusters[i-1] + numCoords;
+    for (int i = 1; i < num_clusters; i++)
+        clusters[i] = clusters[i-1] + num_dim;
 
-    for (i=0; i<numClusters; i++)
-        for (j=0; j<numCoords; j++)
+    for (int i = 0; i < num_clusters; i++)
+        for (int j = 0; j < num_dim; j++)
             clusters[i][j] = objects[i][j];
 
-    for (i=0; i<numObjs; i++)
-        membership[i] = -1;
+    for (int i = 0; i<num_objs; i++)
+        relationship[i] = -1;
 
-    newClusterSize = (int*) calloc(numClusters, sizeof(int));
+    num_current_cluster = (int*) calloc(num_clusters, sizeof(int));
 
-    newClusters    = (float**) malloc(numClusters *            sizeof(float*));
+    curr_cluster    = (float**) malloc(num_clusters * sizeof(float*));
     
-    newClusters[0] = (float*)  calloc(numClusters * numCoords, sizeof(float));
+    curr_cluster[0] = (float*)  calloc(num_clusters * num_dim, sizeof(float));
     
-    for (i = 1; i<numClusters; i++)
-        newClusters[i] = newClusters[i-1] + numCoords;
+    for (int i = 1; i<num_clusters; i++) {
+        float * val = curr_cluster[i-1] + num_dim; 
+        curr_cluster[i] = val;
+    }
 
     do {
-        delta = 0.0;
-        for (i=0; i<numObjs; i++) {
-            index = find_nearest_cluster(numClusters, numCoords, objects[i],
+        delta = 0;
+        for (int i = 0; i < num_objs; i++) {
+            index = find_nearest_cluster(num_clusters, num_dim, objects[i],
                                          clusters);
+            if (relationship[i] != index) 
+                delta += 1.0;
 
-            if (membership[i] != index) delta += 1.0;
+            relationship[i] = index;
 
-            membership[i] = index;
-
-            newClusterSize[index]++;
+            num_current_cluster[index]++;
             
-            for (j=0; j<numCoords; j++)
-                newClusters[index][j] += objects[i][j];
+            for (int j=0; j < num_dim; j++)
+                curr_cluster[index][j] += objects[i][j];
         }
 
-        for (i=0; i<numClusters; i++) {
-            for (j=0; j<numCoords; j++) {
-                if (newClusterSize[i] > 0)
-                    clusters[i][j] = newClusters[i][j] / newClusterSize[i];
-                newClusters[i][j] = 0.0;
+        delta = delta / num_objs;
+
+        for (int i=0; i < num_clusters; i++) {
+            for (int j = 0; j < num_dim; j++) {
+                if (num_current_cluster[i] > 0) {
+                    float val = curr_cluster[i][j] / num_current_cluster[i];
+                    clusters[i][j] = val;
+                }
+                curr_cluster[i][j] = 0;
             }
-            newClusterSize[i] = 0;
+            num_current_cluster[i] = 0;
         }
-            
-        delta /= numObjs;
-    } while (delta > threshold && loop++ < 500);
+        
+        if (delta < threshold)
+            break;
 
-        return clusters;
+    } while (cnt++ < 500);
+
+    return clusters;
 }
 
 int main(int argc, char **argv) {
-    extern char   *optarg;
-    extern int     optind;
     
-    int     numClusters, numCoords, numObjs = 0;
-    int    *membership;
-    char   *filename;
-    float **objects;
     float **clusters;
-
+    int     num_clusters, num_dim, num_objs = 0;
+    int    *relationship;
+    char   *filename;
     int     opt;
+    
     while ( (opt=getopt(argc,argv,"i:n:"))!= EOF) {
         switch (opt) {
             case 'i': filename = optarg;
                       break;
-            case 'n': numClusters = atoi(optarg);
+            case 'n': num_clusters = atoi(optarg);
                       break;
             default:
                       printf("Wrong option\n"); 
@@ -135,20 +146,20 @@ int main(int argc, char **argv) {
 
     struct timeval tvalBefore, tvalAfter;
 
-    objects = file_read(filename, &numObjs, &numCoords);
+    objects = file_read(filename, &num_objs, &num_dim);
     
     gettimeofday (&tvalBefore, NULL);
 
-    membership = (int*) malloc(numObjs * sizeof(int));
+    relationship = (int*) malloc(num_objs * sizeof(int));
 
-    clusters = seq_kmeans(objects, numCoords, numObjs, numClusters,
-                          membership);
+    clusters = seq_kmeans(num_dim, num_objs, num_clusters,
+                          relationship);
 
     gettimeofday (&tvalAfter, NULL);
 
-    printf("numObjs       = %d\n", numObjs);
-    printf("numCoords     = %d\n", numCoords);
-    printf("numClusters   = %d\n", numClusters);
+    printf("num_objs       = %d\n", num_objs);
+    printf("num_dim     = %d\n", num_dim);
+    printf("num_clusters   = %d\n", num_clusters);
 
     printf("Time: %ld microseconds\n",
         ((tvalAfter.tv_sec - tvalBefore.tv_sec)*1000000L
