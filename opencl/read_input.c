@@ -89,28 +89,6 @@ int setup(int argc, char **argv) {
 		
 	/* ============== I/O begin ==============*/
     /* get nfeatures and npoints */
-    //io_timing = omp_get_wtime();
-    if (isBinaryFile) {		//Binary file input
-        int infile;
-        if ((infile = open(filename, O_RDONLY, "0600")) == -1) {
-            fprintf(stderr, "Error: no such file (%s)\n", filename);
-            exit(1);
-        }
-        read(infile, &npoints,   sizeof(int));
-        read(infile, &nfeatures, sizeof(int));        
-
-        /* allocate space for features[][] and read attributes of all objects */
-        buf         = (float*) malloc(npoints*nfeatures*sizeof(float));
-        features    = (float**)malloc(npoints*          sizeof(float*));
-        features[0] = (float*) malloc(npoints*nfeatures*sizeof(float));
-        for (i=1; i<npoints; i++)
-            features[i] = features[i-1] + nfeatures;
-
-        read(infile, buf, npoints*nfeatures*sizeof(float));
-
-        close(infile);
-    }
-    else {
         FILE *infile;
         if ((infile = fopen(filename, "r")) == NULL) {
             fprintf(stderr, "Error: no such file (%s)\n", filename);
@@ -144,8 +122,6 @@ int setup(int argc, char **argv) {
             }            
         }
         fclose(infile);
-    }
-    //io_timing = omp_get_wtime() - io_timing;
 	
 	printf("\nI/O completed\n");
 	printf("\nNumber of objects: %d\n", npoints);
