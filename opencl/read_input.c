@@ -17,7 +17,6 @@ void usage(char *argv0) {
 		"    -i filename      :file containing data to be clustered\n"		
 		"    -m max_nclusters :maximum number of clusters allowed    [default=5]\n"
         "    -n min_nclusters :minimum number of clusters allowed    [default=5]\n"
-		"    -t threshold     :threshold value                       [default=0.001]\n"
 		"    -l nloops        :iteration for each number of clusters [default=1]\n"
 		"    -o               :output cluster center coordinates     [default=off]\n";
     fprintf(stderr, help, argv0);
@@ -66,8 +65,6 @@ int setup(int argc, char **argv) {
 		char   *filename = 0;
 		float  *buf;
 		char	line[1024];
-		int		isBinaryFile = 0;
-
 		float	threshold = 0.001;		/* default value */
 		int		max_nclusters=5;		/* default value */
 		int		min_nclusters=5;		/* default value */
@@ -81,9 +78,6 @@ int setup(int argc, char **argv) {
 		int		i, j, index;
 		int		nloops = 1;				/* default value */
 				
-		int		isRMSE = 0;		
-		float	rmse;
-		
 		int		isOutput = 0;
 		float	cluster_timing;
 
@@ -91,8 +85,6 @@ int setup(int argc, char **argv) {
 		while ( (opt=getopt(argc,argv,"i:t:m:n:l:o"))!= EOF) {
         switch (opt) {
             case 'i': filename=optarg;
-                      break;
-            case 't': threshold=atof(optarg);
                       break;
             case 'm': max_nclusters = atoi(optarg);
                       break;
