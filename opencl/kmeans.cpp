@@ -118,12 +118,10 @@ int main( int argc, char** argv)
 int	kmeansOCL(float **feature, int n_features, int n_points, int n_clusters,
 	int *membership, float **clusters, int *new_centers_len, float **new_centers)	
 {
-	cl_int err = 0;
-	
 	size_t global_work[3] = { n_points, 1, 1 }; 
 	
 	clEnqueueWriteBuffer(cmd_queue, d_cluster, 1, 0, n_clusters * n_features * sizeof(float), clusters[0], 0, 0, 0);
-	int size = 0; int offset = 0;
+	int size = 0, offset = 0;
 					
 	clSetKernelArg(kernel_s, 0, sizeof(void *), (void*) &d_feature_swap);
 	clSetKernelArg(kernel_s, 1, sizeof(void *), (void*) &d_cluster);
