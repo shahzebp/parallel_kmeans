@@ -8,7 +8,6 @@
 /* rmse.c */
 float   euclid_dist_2        (float*, float*, int);
 int     find_nearest_point   (float* , int, float**, int);
-int     cluster(int, int, float**, int, int, float, int*, float***, int);
 int setup(int argc, char** argv);
 int allocate(int npoints, int nfeatures, int nclusters, float **feature);
 void deallocateMemory();

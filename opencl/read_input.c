@@ -24,6 +24,42 @@ void usage(char *argv0) {
     exit(-1);
 }
 
+int cluster(int npoints, int nfeatures, float **features, int min_nclusters, int max_nclusters,
+                    float threshold, int *best_nclusters, float ***cluster_centres, int nloops)
+{
+    int nclusters;
+    int index =0;
+    int *membership;
+    float **tmp_cluster_centres;
+    int i;
+
+    membership = (int*) malloc(npoints * sizeof(int));
+
+    for(nclusters = min_nclusters; nclusters <= max_nclusters; nclusters++)
+    {
+        if (nclusters > npoints)
+            break;
+
+        allocate(npoints, nfeatures, nclusters, features);
+
+        for(i = 0; i < nloops; i++)
+        {
+            tmp_cluster_centres = kmeans_clustering(features, nfeatures, npoints, nclusters, threshold, membership);
+            if (*cluster_centres)
+            {
+                free((*cluster_centres)[0]);
+                free(*cluster_centres);
+            }
+            *cluster_centres = tmp_cluster_centres;
+            deallocateMemory();
+        }
+    }
+
+    free(membership);
+
+    return index;
+}
+
 int setup(int argc, char **argv) {
 		int		opt;
  extern char   *optarg;
