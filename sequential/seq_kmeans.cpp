@@ -40,7 +40,7 @@ static int find_nearest_cluster(int numClusters, int numCoords, float  *object,
 }
 
 float** seq_kmeans(float **objects, int numCoords, int numObjs, int numClusters, 
-        float   threshold, int    *membership, int *loop_iterations)
+        float   threshold, int    *membership)
 {
     int      i, j, index, loop=0;
     int     *newClusterSize;
@@ -98,11 +98,5 @@ float** seq_kmeans(float **objects, int numCoords, int numObjs, int numClusters,
         delta /= numObjs;
     } while (delta > threshold && loop++ < 500);
 
-    *loop_iterations = loop + 1;
-
-    free(newClusters[0]);
-    free(newClusters);
-    free(newClusterSize);
-
-    return clusters;
+        return clusters;
 }
