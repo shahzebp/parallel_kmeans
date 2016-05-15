@@ -45,4 +45,3 @@ int cluster(int npoints, int nfeatures, float **features, int min_nclusters, int
 
     return index;
 }
-
