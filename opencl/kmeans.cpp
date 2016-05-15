@@ -10,17 +10,7 @@
 #include <sys/time.h>
 #include "kmeans.h"
 
-double gettime() {
-	struct timeval t;
-	gettimeofday(&t,NULL);
-	return t.tv_sec+t.tv_usec*1e-6;
-}
-
-#ifdef NV 
-	#include <oclUtils.h>
-#else
-	#include <CL/cl.h>
-#endif
+#include <CL/cl.h>
 
 #define FLT_MAX 3.40282347e+38
 
