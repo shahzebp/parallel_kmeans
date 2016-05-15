@@ -1,14 +1,12 @@
-
 #include <stdio.h>
 #include <string.h>
+#include <pthread.h>
+#include <sys/time.h>
+#include "kmeans.h"
 #include <stdlib.h>
 #include <math.h>
 #include <iostream>
 #include <string>
-
-#include <pthread.h>
-#include <sys/time.h>
-#include "kmeans.h"
 
 #include <CL/cl.h>
 
@@ -105,14 +103,12 @@ int allocate(int n_points, int n_features, int n_clusters, float **feature)
 	clEnqueueWriteBuffer(cmd_queue, d_feature, 1, 0, n_points * n_features * sizeof(float), feature[0], 0, 0, 0);
 	clSetKernelArg(kernel2, 3, sizeof(cl_int), (void*) &n_features);
 	
-    clEnqueueNDRangeKernel(cmd_queue, kernel2, 1, NULL, global_work, NULL, 0, 0, 0);
-	
+    clEnqueueNDRangeKernel(cmd_queue, kernel2, 1, NULL, global_work, NULL, 0, 0, 0);	
 }
 
 int main( int argc, char** argv) 
 {
 	setup(argc, argv);
-
 }
 
 int	kmeansOCL(float **feature, int n_features, int n_points, int n_clusters,

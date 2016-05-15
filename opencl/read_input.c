@@ -1,5 +1,3 @@
-#define _CRT_SECURE_NO_DEPRECATE 1
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,6 +33,7 @@ float** kmeans_clustering(float **feature, int *membership)
     {
         initial[i] = i;
     }
+    
     initial_points = npoints;
 
     for (i=0; i<nclusters && initial_points >= 0; i++) {
