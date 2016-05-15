@@ -14,8 +14,9 @@
 int nfeatures = 0;
 int npoints = 0;
 int nclusters = 5;
+float threshold = 0.001;
 
-float** kmeans_clustering(float **feature, float threshold, int *membership)
+float** kmeans_clustering(float **feature, int *membership)
 {
     int i, j, n=0, loop=0, temp, *new_centers_len, *initial, initial_points;
 
@@ -78,7 +79,7 @@ float** kmeans_clustering(float **feature, float threshold, int *membership)
     return clusters;
 }
 
-int cluster(float **features, float threshold, float ***cluster_centres)
+int cluster(float **features, float ***cluster_centres)
 {
     int index =0;
     int *membership;
@@ -92,7 +93,7 @@ int cluster(float **features, float threshold, float ***cluster_centres)
 
 	allocate(npoints, nfeatures, nclusters, features);
 
-	tmp_cluster_centres = kmeans_clustering(features, threshold, membership);
+	tmp_cluster_centres = kmeans_clustering(features, membership);
 	*cluster_centres = tmp_cluster_centres;
 
     return index;
@@ -103,7 +104,6 @@ int setup(int argc, char **argv) {
 		char   *filename = 0;
 		float  *buf;
 		char	line[1024];
-		float	threshold = 0.001;
 
 		float **features;
 		float **cluster_centres=NULL;
@@ -160,7 +160,7 @@ int setup(int argc, char **argv) {
     gettimeofday (&tvalBefore, NULL);
 
 	cluster_centres = NULL;
-    index = cluster(features, threshold, &cluster_centres);
+    index = cluster(features, &cluster_centres);
     
     gettimeofday (&tvalAfter, NULL);
 
