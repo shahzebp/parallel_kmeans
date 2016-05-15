@@ -8,7 +8,6 @@ kmeans_kernel_c(__global float  *feature, __global float *clusters, __global int
 {
 	unsigned int point_id = get_global_id(0);
     int index = 0;
-    //const unsigned int point_id = get_global_id(0);
 		if (point_id < npoints)
 		{
 			float min_dist=FLT_MAX;
