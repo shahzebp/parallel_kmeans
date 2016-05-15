@@ -8,6 +8,7 @@
 
 #include <pthread.h>
 #include <sys/time.h>
+#include "kmeans.h"
 
 double gettime() {
 	struct timeval t;
