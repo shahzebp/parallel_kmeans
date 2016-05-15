@@ -79,35 +79,28 @@ float** kmeans_clustering(float **feature, int *membership)
     return clusters;
 }
 
-int cluster(float **features, float ***cluster_centres)
+void cluster(float **features, float ***cluster_centres)
 {
-    int index =0;
     int *membership;
     float **tmp_cluster_centres;
-    int i;
 
     membership = (int*) malloc(npoints * sizeof(int));
 
 	if (nclusters > npoints)
-		return 0;
+		return;
 
 	allocate(npoints, nfeatures, nclusters, features);
 
 	tmp_cluster_centres = kmeans_clustering(features, membership);
 	*cluster_centres = tmp_cluster_centres;
-
-    return index;
 }
 
 int setup(int argc, char **argv) {
-		int		opt;
+		int opt, i, j;
 		char   *filename = 0;
-		float  *buf;
 		char	line[1024];
 
-		float **features;
-		float **cluster_centres=NULL;
-		int		i, j, index;
+		float *buf, **features, **cluster_centres=NULL;
 
 		while ( (opt=getopt(argc,argv,"i:m:"))!= EOF) {
         switch (opt) {
@@ -160,7 +153,7 @@ int setup(int argc, char **argv) {
     gettimeofday (&tvalBefore, NULL);
 
 	cluster_centres = NULL;
-    index = cluster(features, &cluster_centres);
+    cluster(features, &cluster_centres);
     
     gettimeofday (&tvalAfter, NULL);
 

@@ -74,8 +74,6 @@ int allocate(int n_points, int n_features, int n_clusters, float **feature)
 	fclose(fp);
 	
 	cl_int err = 0;	
-	int use_gpu = 1;
-
 	if(initialize()) return -1;
 
 	const char * slist[2] = { source, 0 };
@@ -120,15 +118,10 @@ int main( int argc, char** argv)
 int	kmeansOCL(float **feature, int n_features, int n_points, int n_clusters,
 	int *membership, float **clusters, int *new_centers_len, float **new_centers)	
 {
-  
-	int delta = 0;
-	int i, j, k;
-	cl_int err = 0;
-	
 	size_t global_work[3] = { n_points, 1, 1 }; 
 	
 	clEnqueueWriteBuffer(cmd_queue, d_cluster, 1, 0, n_clusters * n_features * sizeof(float), clusters[0], 0, 0, 0);
-	int size = 0; int offset = 0;
+	int size = 0, offset = 0;
 					
 	clSetKernelArg(kernel_s, 0, sizeof(void *), (void*) &d_feature_swap);
 	clSetKernelArg(kernel_s, 1, sizeof(void *), (void*) &d_cluster);
@@ -143,8 +136,8 @@ int	kmeansOCL(float **feature, int n_features, int n_points, int n_clusters,
 	clFinish(cmd_queue);
 	clEnqueueReadBuffer(cmd_queue, d_membership, 1, 0, n_points * sizeof(int), membership_OCL, 0, 0, 0);
 	
-	delta = 0;
-	for (i = 0; i < n_points; i++)
+	int delta = 0;
+	for (int i = 0; i < n_points; i++)
 	{
 		int cluster_id = membership_OCL[i];
 		new_centers_len[cluster_id]++;
@@ -153,7 +146,7 @@ int	kmeansOCL(float **feature, int n_features, int n_points, int n_clusters,
 			delta++;
 			membership[i] = membership_OCL[i];
 		}
-		for (j = 0; j < n_features; j++)
+		for (int j = 0; j < n_features; j++)
 		{
 			new_centers[cluster_id][j] += feature[i][j];
 		}

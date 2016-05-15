@@ -15,10 +15,7 @@ kmeans_kernel_c(__global float  *feature, __global float *clusters, __global int
 		{
 			float ans  = 0;
 			for (int l=0; l<nfeatures; l++)
-			{
-					ans += (feature[l * npoints + point_id]-clusters[i*nfeatures+l])*
-						   (feature[l * npoints + point_id]-clusters[i*nfeatures+l]);
-			}
+				ans += pow(feature[l*npoints+point_id]-clusters[i*nfeatures+l], 2);
 
 			if (ans < min_dist)
 			{
