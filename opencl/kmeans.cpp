@@ -23,14 +23,10 @@ cl_mem d_feature_swap;
 cl_mem d_cluster;
 cl_mem d_membership;
 
-cl_kernel kernel_s;
-cl_kernel kernel2;
+cl_kernel kernel_s, kernel2;
 
-int   *membership_OCL;
-int   *membership_d;
-float *feature_d;
-float *clusters_d;
-float *center_d;
+int   *membership_OCL, *membership_d;
+float *feature_d, *clusters_d, *center_d;
 
 static int initialize()
 {
