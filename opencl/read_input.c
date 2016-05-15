@@ -33,7 +33,7 @@ float** kmeans_clustering(float **feature, int *membership)
     {
         initial[i] = i;
     }
-    
+
     initial_points = npoints;
 
     for (i=0; i<nclusters && initial_points >= 0; i++) {
@@ -169,5 +169,6 @@ int setup(int argc, char **argv) {
         ((tvalAfter.tv_sec - tvalBefore.tv_sec)*1000000L
         +tvalAfter.tv_usec) - tvalBefore.tv_usec
         );
+    
     return(0);
 }
