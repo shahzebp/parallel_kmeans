@@ -86,7 +86,7 @@ float** kmeans_clustering(float **feature, int nfeatures, int npoints,
 }
 
 int cluster(int npoints, int nfeatures, float **features, int min_nclusters, int max_nclusters,
-                    float threshold, float ***cluster_centres, int nloops)
+                    float threshold, float ***cluster_centres)
 {
     int nclusters;
     int index =0;
@@ -134,9 +134,6 @@ int setup(int argc, char **argv) {
 		float **features;
 		float **cluster_centres=NULL;
 		int		i, j, index;
-		int		nloops = 1;				/* default value */
-				
-		int		isOutput = 1;
 		float	cluster_timing;
 
 		while ( (opt=getopt(argc,argv,"i:t:m:n:l:o"))!= EOF) {
@@ -197,7 +194,7 @@ int setup(int argc, char **argv) {
 
 	cluster_centres = NULL;
     index = cluster(npoints, nfeatures, features, min_nclusters, max_nclusters,
-					threshold, &cluster_centres, nloops);
+					threshold, &cluster_centres);
     
     gettimeofday (&tvalAfter, NULL);
 
