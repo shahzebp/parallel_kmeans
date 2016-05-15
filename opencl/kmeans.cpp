@@ -20,13 +20,14 @@ static cl_int           num_devices;
 
 cl_mem d_feature;
 cl_mem d_feature_swap;
-cl_mem d_cluster;
-cl_mem d_membership;
+cl_mem cluster_dev;
+cl_mem relationship_dev;
 
 cl_kernel kernel_s, kernel2;
 
 int   *membership_OCL, *membership_d;
 float *feature_d, *clusters_d, *center_d;
+int sourcesize = 1024*1024;
 
 static int initialize()
 {
@@ -60,7 +61,6 @@ static int initialize()
 int allocate(int n_points, int n_features, int n_clusters, float **feature)
 {
 
-	int sourcesize = 1024*1024;
 	char * source = (char *)calloc(sourcesize, sizeof(char)); 
 	char * tempchar = "./kmeans.cl";
 	FILE * fp = fopen(tempchar, "rb"); 
@@ -91,9 +91,9 @@ int allocate(int n_points, int n_features, int n_clusters, float **feature)
     d_feature_swap = clCreateBuffer(context, CL_MEM_READ_WRITE, n_points * n_features * sizeof(float), NULL, &err );
 	clSetKernelArg(kernel2, 1, sizeof(void *), (void*) &d_feature_swap);
 	
-    d_cluster = clCreateBuffer(context, CL_MEM_READ_WRITE, n_clusters * n_features  * sizeof(float), NULL, &err );
+    cluster_dev = clCreateBuffer(context, CL_MEM_READ_WRITE, n_clusters * n_features  * sizeof(float), NULL, &err );
 	
-    d_membership = clCreateBuffer(context, CL_MEM_READ_WRITE, n_points * sizeof(int), NULL, &err );
+    relationship_dev = clCreateBuffer(context, CL_MEM_READ_WRITE, n_points * sizeof(int), NULL, &err );
 	clSetKernelArg(kernel2, 2, sizeof(cl_int), (void*) &n_points);
 		
 	clEnqueueWriteBuffer(cmd_queue, d_feature, 1, 0, n_points * n_features * sizeof(float), feature[0], 0, 0, 0);
@@ -111,38 +111,43 @@ int	kmeansOCL(float **feature, int n_features, int n_points, int n_clusters,
 	int *membership, float **clusters, int *new_centers_len, float **new_centers)	
 {
 	size_t global_work[3] = { n_points, 1, 1 }; 
+
+	clSetKernelArg(kernel_s, 3, sizeof(cl_int), (void*) &n_points);
 	
-	clEnqueueWriteBuffer(cmd_queue, d_cluster, 1, 0, n_clusters * n_features * sizeof(float), clusters[0], 0, 0, 0);
-	int size = 0, offset = 0;
+	clEnqueueWriteBuffer(cmd_queue, cluster_dev, 1, 0, n_clusters * n_features * sizeof(float), clusters[0], 0, 0, 0);
 					
 	clSetKernelArg(kernel_s, 0, sizeof(void *), (void*) &d_feature_swap);
-	clSetKernelArg(kernel_s, 1, sizeof(void *), (void*) &d_cluster);
-	clSetKernelArg(kernel_s, 2, sizeof(void *), (void*) &d_membership);
-	clSetKernelArg(kernel_s, 3, sizeof(cl_int), (void*) &n_points);
+	clSetKernelArg(kernel_s, 1, sizeof(void *), (void*) &cluster_dev);
+	
 	clSetKernelArg(kernel_s, 4, sizeof(cl_int), (void*) &n_clusters);
+	int conv_point = 0;
+
 	clSetKernelArg(kernel_s, 5, sizeof(cl_int), (void*) &n_features);
+
+	clSetKernelArg(kernel_s, 2, sizeof(void *), (void*) &relationship_dev);
+	int offset = 0;
 	clSetKernelArg(kernel_s, 6, sizeof(cl_int), (void*) &offset);
+
+	int size = 0;
 	clSetKernelArg(kernel_s, 7, sizeof(cl_int), (void*) &size);
 
 	clEnqueueNDRangeKernel(cmd_queue, kernel_s, 1, NULL, global_work, NULL, 0, 0, 0);
 	clFinish(cmd_queue);
-	clEnqueueReadBuffer(cmd_queue, d_membership, 1, 0, n_points * sizeof(int), membership_OCL, 0, 0, 0);
+	clEnqueueReadBuffer(cmd_queue, relationship_dev, 1, 0, n_points * sizeof(int), membership_OCL, 0, 0, 0);
 	
-	int delta = 0;
+	
 	for (int i = 0; i < n_points; i++)
 	{
-		int cluster_id = membership_OCL[i];
-		new_centers_len[cluster_id]++;
-		if (membership_OCL[i] != membership[i])
-		{
-			delta++;
+		new_centers_len[membership_OCL[i]]++;
+		if (membership_OCL[i] != membership[i]) {
 			membership[i] = membership_OCL[i];
+			conv_point = conv_point + 1;
 		}
-		for (int j = 0; j < n_features; j++)
-		{
-			new_centers[cluster_id][j] += feature[i][j];
+		
+		for (int j = 0; j < n_features; j++) {
+			new_centers[membership_OCL[i]][j] += feature[i][j];
 		}
 	}
 
-	return delta;
+	return conv_point;
 }
