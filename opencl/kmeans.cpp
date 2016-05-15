@@ -74,8 +74,6 @@ int allocate(int n_points, int n_features, int n_clusters, float **feature)
 	fclose(fp);
 	
 	cl_int err = 0;	
-	int use_gpu = 1;
-
 	if(initialize()) return -1;
 
 	const char * slist[2] = { source, 0 };
