@@ -203,15 +203,8 @@ int setup(int argc, char **argv) {
 		if(nloops != 1){									// single k, multiple iteration
 			printf("Average Clustering Time: %.5fsec\n",
 					cluster_timing / nloops);
-			if(isRMSE)										// if calculated RMSE
-				printf("Number of trials to approach the best RMSE of %.3f is %d\n", rmse, index + 1);
-		}
-		else{												// single k, single iteration				
-			if(isRMSE)										// if calculated RMSE
-				printf("Root Mean Squared Error: %.3f\n", rmse);
 		}
 	}
-	
 
 	/* free up memory */
 	free(features[0]);
