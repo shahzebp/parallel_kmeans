@@ -85,10 +85,9 @@ float** kmeans_clustering(float **feature, int nfeatures, int npoints,
     return clusters;
 }
 
-int cluster(int npoints, int nfeatures, float **features, int min_nclusters, int max_nclusters,
-                    float threshold, float ***cluster_centres)
+int cluster(int npoints, int nfeatures, float **features, int nclusters,
+									float threshold, float ***cluster_centres)
 {
-    int nclusters;
     int index =0;
     int *membership;
     float **tmp_cluster_centres;
@@ -96,23 +95,19 @@ int cluster(int npoints, int nfeatures, float **features, int min_nclusters, int
 
     membership = (int*) malloc(npoints * sizeof(int));
 
-    for(nclusters = min_nclusters; nclusters <= max_nclusters; nclusters++)
-    {
-        if (nclusters > npoints)
-            break;
+	if (nclusters > npoints)
+		return 0;
 
-        allocate(npoints, nfeatures, nclusters, features);
+	allocate(npoints, nfeatures, nclusters, features);
 
-		tmp_cluster_centres = kmeans_clustering(features, nfeatures, npoints, nclusters, threshold, membership);
-		if (*cluster_centres)
-		{
-			free((*cluster_centres)[0]);
-			free(*cluster_centres);
-		}
-		*cluster_centres = tmp_cluster_centres;
-		deallocateMemory();
-    }
-
+	tmp_cluster_centres = kmeans_clustering(features, nfeatures, npoints, nclusters, threshold, membership);
+	if (*cluster_centres)
+	{
+		free((*cluster_centres)[0]);
+		free(*cluster_centres);
+	}
+	*cluster_centres = tmp_cluster_centres;
+	deallocateMemory();
     free(membership);
 
     return index;
@@ -125,8 +120,7 @@ int setup(int argc, char **argv) {
 		float  *buf;
 		char	line[1024];
 		float	threshold = 0.001;
-		int		max_nclusters=5;
-		int		min_nclusters=5;
+		int		nclusters=5;
 		int		nfeatures = 0;
 		int		npoints = 0;
 
@@ -134,13 +128,11 @@ int setup(int argc, char **argv) {
 		float **cluster_centres=NULL;
 		int		i, j, index;
 
-		while ( (opt=getopt(argc,argv,"i:t:m:n:l:o"))!= EOF) {
+		while ( (opt=getopt(argc,argv,"i:m:"))!= EOF) {
         switch (opt) {
             case 'i': filename=optarg;
                       break;
-            case 'm': max_nclusters = atoi(optarg);
-                      break;
-            case 'n': min_nclusters = atoi(optarg);
+            case 'm': nclusters = atoi(optarg);
                       break;
             default: 
                       break;
@@ -191,14 +183,14 @@ int setup(int argc, char **argv) {
     gettimeofday (&tvalBefore, NULL);
 
 	cluster_centres = NULL;
-    index = cluster(npoints, nfeatures, features, min_nclusters, max_nclusters,
+    index = cluster(npoints, nfeatures, features, nclusters,
 					threshold, &cluster_centres);
     
     gettimeofday (&tvalAfter, NULL);
 
 
 	printf("\nCentroid Coordinates\n");
-	for(i = 0; i < max_nclusters; i++)
+	for(i = 0; i < nclusters; i++)
 	{
 		printf("%d:", i);
 		for(j = 0; j < nfeatures; j++)
