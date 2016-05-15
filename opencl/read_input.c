@@ -86,7 +86,7 @@ float** kmeans_clustering(float **feature, int nfeatures, int npoints,
 }
 
 int cluster(int npoints, int nfeatures, float **features, int min_nclusters, int max_nclusters,
-                    float threshold, int *best_nclusters, float ***cluster_centres, int nloops)
+                    float threshold, float ***cluster_centres, int nloops)
 {
     int nclusters;
     int index =0;
@@ -130,7 +130,6 @@ int setup(int argc, char **argv) {
 		float	threshold = 0.001;		/* default value */
 		int		max_nclusters=5;		/* default value */
 		int		min_nclusters=5;		/* default value */
-		int		best_nclusters = 0;
 		int		nfeatures = 0;
 		int		npoints = 0;
 		float	len;
@@ -173,7 +172,6 @@ int setup(int argc, char **argv) {
             }
         }        
 
-        /* allocate space for features[] and read attributes of all objects */
         buf         = (float*) malloc(npoints*nfeatures*sizeof(float));
         features    = (float**)malloc(npoints*          sizeof(float*));
         features[0] = (float*) malloc(npoints*nfeatures*sizeof(float));
@@ -190,16 +188,9 @@ int setup(int argc, char **argv) {
         }
         fclose(infile);
 	
-	printf("\nI/O completed\n");
 	printf("\nNumber of objects: %d\n", npoints);
 	printf("Number of features: %d\n", nfeatures);	
 	
-	if (npoints < min_nclusters)
-	{
-		printf("Error: min_nclusters(%d) > npoints(%d) -- cannot proceed\n", min_nclusters, npoints);
-		exit(0);
-	}
-
 	srand(7);
 	memcpy(features[0], buf, npoints*nfeatures*sizeof(float));
 	free(buf);
@@ -209,26 +200,19 @@ int setup(int argc, char **argv) {
 
 	cluster_centres = NULL;
     index = cluster(npoints, nfeatures, features, min_nclusters, max_nclusters,
-					threshold, &best_nclusters, &cluster_centres, nloops);
+					threshold, &cluster_centres, nloops);
     
     gettimeofday (&tvalAfter, NULL);
 
 
-	if(min_nclusters == max_nclusters)
+	printf("\nCentroid Coordinates\n");
+	for(i = 0; i < max_nclusters; i++)
 	{
-		printf("\nCentroid Coordinates\n");
-		for(i = 0; i < max_nclusters; i++)
-		{
-			printf("%d:", i);
-			for(j = 0; j < nfeatures; j++)
-				printf(" %.2f", cluster_centres[i][j]);
-			printf("\n\n");
-		}
+		printf("%d:", i);
+		for(j = 0; j < nfeatures; j++)
+			printf(" %.2f", cluster_centres[i][j]);
+		printf("\n\n");
 	}
-
-	len = (float) ((max_nclusters - min_nclusters + 1)*nloops);
-
-	printf("Number of Iteration: %d\n", nloops);
 
 	printf("Time for Entire Clustering: %.5fsec\n", cluster_timing);
 
@@ -237,7 +221,6 @@ int setup(int argc, char **argv) {
         +tvalAfter.tv_usec) - tvalBefore.tv_usec
         );
 
-	/* free up memory */
 	free(features[0]);
 	free(features);    
     return(0);
