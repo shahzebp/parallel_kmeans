@@ -12,10 +12,4 @@
 
 float** seq_kmeans(float**, int, int, int, float, int*);
 
-float** file_read(int, char*, int*, int*);
-int     file_write(char*, int, int, int, float**, int*);
-
-
-double  wtime(void);
-
-extern int _debug;
+float** file_read(char*, int*, int*);
