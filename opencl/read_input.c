@@ -258,25 +258,6 @@ int setup(int argc, char **argv) {
         ((tvalAfter.tv_sec - tvalBefore.tv_sec)*1000000L
         +tvalAfter.tv_usec) - tvalBefore.tv_usec
         );
-	
-	if(min_nclusters != max_nclusters){
-		if(nloops != 1){									//range of k, multiple iteration
-			printf("Average Clustering Time: %fsec\n",
-					cluster_timing / len);
-			printf("Best number of clusters is %d\n", best_nclusters);				
-		}
-		else{												//range of k, single iteration
-			printf("Average Clustering Time: %fsec\n",
-					cluster_timing / len);
-			printf("Best number of clusters is %d\n", best_nclusters);				
-		}
-	}
-	else{
-		if(nloops != 1){									// single k, multiple iteration
-			printf("Average Clustering Time: %.5fsec\n",
-					cluster_timing / nloops);
-		}
-	}
 
 	/* free up memory */
 	free(features[0]);
