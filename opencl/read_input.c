@@ -103,17 +103,14 @@ int cluster(int npoints, int nfeatures, float **features, int min_nclusters, int
 
         allocate(npoints, nfeatures, nclusters, features);
 
-        for(i = 0; i < nloops; i++)
-        {
-            tmp_cluster_centres = kmeans_clustering(features, nfeatures, npoints, nclusters, threshold, membership);
-            if (*cluster_centres)
-            {
-                free((*cluster_centres)[0]);
-                free(*cluster_centres);
-            }
-            *cluster_centres = tmp_cluster_centres;
-            deallocateMemory();
-        }
+		tmp_cluster_centres = kmeans_clustering(features, nfeatures, npoints, nclusters, threshold, membership);
+		if (*cluster_centres)
+		{
+			free((*cluster_centres)[0]);
+			free(*cluster_centres);
+		}
+		*cluster_centres = tmp_cluster_centres;
+		deallocateMemory();
     }
 
     free(membership);
