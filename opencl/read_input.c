@@ -24,8 +24,6 @@ void usage(char *argv0) {
         "    -n min_nclusters :minimum number of clusters allowed    [default=5]\n"
 		"    -t threshold     :threshold value                       [default=0.001]\n"
 		"    -l nloops        :iteration for each number of clusters [default=1]\n"
-		"    -b               :input file is in binary format\n"
-        "    -r               :calculate RMSE                        [default=off]\n"
 		"    -o               :output cluster center coordinates     [default=off]\n";
     fprintf(stderr, help, argv0);
     exit(-1);
