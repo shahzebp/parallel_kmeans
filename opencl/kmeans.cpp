@@ -67,23 +67,6 @@ static int initialize(int use_gpu)
 	return 0;
 }
 
-static int shutdown()
-{
-	// release resources
-	if( cmd_queue ) clReleaseCommandQueue( cmd_queue );
-	if( context ) clReleaseContext( context );
-	if( device_list ) delete device_list;
-
-	// reset all variables
-	cmd_queue = 0;
-	context = 0;
-	device_list = 0;
-	num_devices = 0;
-	device_type = 0;
-
-	return 0;
-}
-
 cl_mem d_feature;
 cl_mem d_feature_swap;
 cl_mem d_cluster;
