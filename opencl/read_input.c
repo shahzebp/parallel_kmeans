@@ -161,9 +161,6 @@ int setup(int argc, char **argv) {
         }
         fclose(infile);
 	
-	printf("\nNumber of objects: %d\n", npoints);
-	printf("Number of coordinates: %d\n", nfeatures);	
-	
 	srand(7);
 	memcpy(features[0], buf, npoints*nfeatures*sizeof(float));
 	free(buf);
@@ -176,17 +173,16 @@ int setup(int argc, char **argv) {
     
     gettimeofday (&tvalAfter, NULL);
 
-
-	printf("\nCentroid Coordinates\n");
-	for(i = 0; i < nclusters; i++)
+	printf("Coordinates of the Centroid are:\n");
+	for(int l=0;l<nclusters;l++)
 	{
-		printf("%d:", i);
-		for(j = 0; j < nfeatures; j++)
-			printf(" %.2f", cluster_centres[i][j]);
-		printf("\n\n");
+		printf("Centroid Number %d: ", l);
+		for(int m=0;m<nfeatures;m++)
+			printf(" %0.4f", cluster_centres[l][m]);
+		printf("\n");
 	}
 
-    printf("Time: %ld microseconds\n",
+	printf("Time: %ld microseconds\n",
         ((tvalAfter.tv_sec - tvalBefore.tv_sec)*1000000L
         +tvalAfter.tv_usec) - tvalBefore.tv_usec
         );
