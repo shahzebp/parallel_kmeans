@@ -86,7 +86,7 @@ float** kmeans_clustering(float **feature, int nfeatures, int npoints,
 }
 
 int cluster(int npoints, int nfeatures, float **features, int min_nclusters, int max_nclusters,
-                    float threshold, float ***cluster_centres, int nloops)
+                    float threshold, float ***cluster_centres)
 {
     int nclusters;
     int index =0;
@@ -103,17 +103,14 @@ int cluster(int npoints, int nfeatures, float **features, int min_nclusters, int
 
         allocate(npoints, nfeatures, nclusters, features);
 
-        for(i = 0; i < nloops; i++)
-        {
-            tmp_cluster_centres = kmeans_clustering(features, nfeatures, npoints, nclusters, threshold, membership);
-            if (*cluster_centres)
-            {
-                free((*cluster_centres)[0]);
-                free(*cluster_centres);
-            }
-            *cluster_centres = tmp_cluster_centres;
-            deallocateMemory();
-        }
+		tmp_cluster_centres = kmeans_clustering(features, nfeatures, npoints, nclusters, threshold, membership);
+		if (*cluster_centres)
+		{
+			free((*cluster_centres)[0]);
+			free(*cluster_centres);
+		}
+		*cluster_centres = tmp_cluster_centres;
+		deallocateMemory();
     }
 
     free(membership);
@@ -127,20 +124,15 @@ int setup(int argc, char **argv) {
 		char   *filename = 0;
 		float  *buf;
 		char	line[1024];
-		float	threshold = 0.001;		/* default value */
-		int		max_nclusters=5;		/* default value */
-		int		min_nclusters=5;		/* default value */
+		float	threshold = 0.001;
+		int		max_nclusters=5;
+		int		min_nclusters=5;
 		int		nfeatures = 0;
 		int		npoints = 0;
-		float	len;
-		         
+
 		float **features;
 		float **cluster_centres=NULL;
 		int		i, j, index;
-		int		nloops = 1;				/* default value */
-				
-		int		isOutput = 1;
-		float	cluster_timing;
 
 		while ( (opt=getopt(argc,argv,"i:t:m:n:l:o"))!= EOF) {
         switch (opt) {
@@ -200,7 +192,7 @@ int setup(int argc, char **argv) {
 
 	cluster_centres = NULL;
     index = cluster(npoints, nfeatures, features, min_nclusters, max_nclusters,
-					threshold, &cluster_centres, nloops);
+					threshold, &cluster_centres);
     
     gettimeofday (&tvalAfter, NULL);
 
@@ -213,8 +205,6 @@ int setup(int argc, char **argv) {
 			printf(" %.2f", cluster_centres[i][j]);
 		printf("\n\n");
 	}
-
-	printf("Time for Entire Clustering: %.5fsec\n", cluster_timing);
 
     printf("Time: %ld microseconds\n",
         ((tvalAfter.tv_sec - tvalBefore.tv_sec)*1000000L
