@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <float.h>
 
 #include "kmeans.h"
 
@@ -36,40 +37,31 @@ void find_nearest_cluster(int numCoords, int numObjs, int numClusters, float *ob
 
     membershipChanged[threadIdx.x] = 0;
 
-    int objectId = blockDim.x * blockIdx.x + threadIdx.x;
+    int objectId =  threadIdx.x + (blockDim.x * blockIdx.x);
 
     if (objectId < numObjs) {
-        int   index, i;
-        float dist, min_dist;
-        index    = 0;
-        min_dist = euclid_dist_2(numCoords, numObjs, numClusters,
-                                 objects, clusters, objectId, 0);
+        float min_dist;
+        int index  = -1;
+        min_dist = FLT_MAX;
 
-        for (i=1; i<numClusters; i++) {
-            dist = euclid_dist_2(numCoords, numObjs, numClusters,
+        for (int i=0; i<numClusters; i++) {
+            float dist = euclid_dist_2(numCoords, numObjs, numClusters,
                                  objects, clusters, objectId, i);
-            if (dist < min_dist) { 
-                min_dist = dist;
-                index    = i;
-            }
+            index = (dist < min_dist ? (min_dist = dist, i): index);
         }
 
         if (membership[objectId] != index) {
+            membership[objectId] = index;
             membershipChanged[threadIdx.x] = 1;
         }
 
-        membership[objectId] = index;
-
         __syncthreads();
 
-        for (unsigned int s = blockDim.x / 2; s > 0; s >>= 1) {
-            if (threadIdx.x < s) {
-                membershipChanged[threadIdx.x] +=
-                    membershipChanged[threadIdx.x + s];
-            }
+        for (unsigned int s = blockDim.x / 2; s > 0; s /= 2) {
+            membershipChanged[threadIdx.x] += ((threadIdx.x < s) ? membershipChanged[threadIdx.x + s] : 0);
             __syncthreads();
         }
-
+         
         if (threadIdx.x == 0) {
             intermediates[blockIdx.x] = membershipChanged[0];
         }
@@ -87,13 +79,11 @@ void compute_delta(int *deviceIntermediates, int numIntermediates, int numInterm
     __syncthreads();
 
     for (unsigned int s = numIntermediates2 / 2; s > 0; s >>= 1) {
-        if (threadIdx.x < s) {
-            intermediates[threadIdx.x] += intermediates[threadIdx.x + s];
-        }
+        intermediates[threadIdx.x] += ((threadIdx.x < s) ? intermediates[threadIdx.x + s] : 0);
         __syncthreads();
     }
 
-    if (threadIdx.x == 0) {
+    if (!(threadIdx.x)) {
         deviceIntermediates[0] = intermediates[0];
     }
 }
