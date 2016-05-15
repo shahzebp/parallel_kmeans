@@ -142,45 +142,29 @@ int setup(int argc, char **argv) {
 	printf("\nI/O completed\n");
 	printf("\nNumber of objects: %d\n", npoints);
 	printf("Number of features: %d\n", nfeatures);	
-	/* ============== I/O end ==============*/
-
-	// error check for clusters
+	
 	if (npoints < min_nclusters)
 	{
 		printf("Error: min_nclusters(%d) > npoints(%d) -- cannot proceed\n", min_nclusters, npoints);
 		exit(0);
 	}
 
-	srand(7);												/* seed for future random number generator */	
-	memcpy(features[0], buf, npoints*nfeatures*sizeof(float)); /* now features holds 2-dimensional array of features */
+	srand(7);
+	memcpy(features[0], buf, npoints*nfeatures*sizeof(float));
 	free(buf);
 
-	/* ======================= core of the clustering ===================*/
-
-	    struct timeval tvalBefore, tvalAfter;
-
+	struct timeval tvalBefore, tvalAfter;
     gettimeofday (&tvalBefore, NULL);
 
 	cluster_centres = NULL;
-    index = cluster(npoints,				/* number of data points */
-					nfeatures,				/* number of features for each point */
-					features,				/* array: [npoints][nfeatures] */
-					min_nclusters,			/* range of min to max number of clusters */
-					max_nclusters,
-					threshold,				/* loop termination factor */
-				   &best_nclusters,			/* return: number between min and max */
-				   &cluster_centres,		/* return: [best_nclusters][nfeatures] */  
-					nloops);				/* number of iteration for each number of clusters */		
+    index = cluster(npoints, nfeatures, features, min_nclusters, max_nclusters,
+					threshold, &best_nclusters, &cluster_centres, nloops);
     
     gettimeofday (&tvalAfter, NULL);
 
 
-	/* =============== Command Line Output =============== */
-
-	/* cluster center coordinates
-	   :displayed only for when k=1*/
 	if((min_nclusters == max_nclusters) && (isOutput == 1)) {
-		printf("\n================= Centroid Coordinates =================\n");
+		printf("\nCentroid Coordinates\n");
 		for(i = 0; i < max_nclusters; i++){
 			printf("%d:", i);
 			for(j = 0; j < nfeatures; j++){
