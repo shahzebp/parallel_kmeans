@@ -14,29 +14,23 @@
 int nfeatures = 0;
 int npoints = 0;
 int nclusters = 5;
+float threshold = 0.001;
 
-float** kmeans_clustering(float **feature, float threshold, int *membership)
+float** kmeans_clustering(float **feature, int *membership)
 {
-    int      i, j, n = 0;
-    int      loop=0, temp;
-    int     *new_centers_len;
-    float    delta;
-    float  **clusters;
-    float  **new_centers;
+    int i, j, n=0, loop=0, temp, *new_centers_len, *initial, initial_points;
 
-    int     *initial;
-    int      initial_points;
-    int      c = 0;
+	float delta, **clusters, **new_centers;
 
     if (nclusters > npoints)
         nclusters = npoints;
 
-    clusters    = (float**) malloc(nclusters *             sizeof(float*));
-    clusters[0] = (float*)  malloc(nclusters * nfeatures * sizeof(float));
+    clusters = (float**) malloc(nclusters * sizeof(float*));
+    clusters[0] = (float*) malloc(nclusters * nfeatures * sizeof(float));
     for (i=1; i<nclusters; i++)
         clusters[i] = clusters[i-1] + nfeatures;
 
-    initial = (int *) malloc (npoints * sizeof(int));
+    initial = (int *)malloc(npoints * sizeof(int));
     for (i = 0; i < npoints; i++)
     {
         initial[i] = i;
@@ -78,7 +72,6 @@ float** kmeans_clustering(float **feature, float threshold, int *membership)
             }
             new_centers_len[i] = 0;
         }
-        c++;
         if (delta < threshold)
             break;
     } while ((loop++ < 500));
@@ -86,7 +79,7 @@ float** kmeans_clustering(float **feature, float threshold, int *membership)
     return clusters;
 }
 
-int cluster(float **features, float threshold, float ***cluster_centres)
+int cluster(float **features, float ***cluster_centres)
 {
     int index =0;
     int *membership;
@@ -100,7 +93,7 @@ int cluster(float **features, float threshold, float ***cluster_centres)
 
 	allocate(npoints, nfeatures, nclusters, features);
 
-	tmp_cluster_centres = kmeans_clustering(features, threshold, membership);
+	tmp_cluster_centres = kmeans_clustering(features, membership);
 	*cluster_centres = tmp_cluster_centres;
 
     return index;
@@ -111,7 +104,6 @@ int setup(int argc, char **argv) {
 		char   *filename = 0;
 		float  *buf;
 		char	line[1024];
-		float	threshold = 0.001;
 
 		float **features;
 		float **cluster_centres=NULL;
@@ -163,13 +155,12 @@ int setup(int argc, char **argv) {
 	
 	srand(7);
 	memcpy(features[0], buf, npoints*nfeatures*sizeof(float));
-	free(buf);
 
 	struct timeval tvalBefore, tvalAfter;
     gettimeofday (&tvalBefore, NULL);
 
 	cluster_centres = NULL;
-    index = cluster(features, threshold, &cluster_centres);
+    index = cluster(features, &cluster_centres);
     
     gettimeofday (&tvalAfter, NULL);
 
@@ -186,8 +177,5 @@ int setup(int argc, char **argv) {
         ((tvalAfter.tv_sec - tvalBefore.tv_sec)*1000000L
         +tvalAfter.tv_usec) - tvalBefore.tv_usec
         );
-
-	free(features[0]);
-	free(features);    
     return(0);
 }
