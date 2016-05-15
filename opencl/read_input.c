@@ -149,8 +149,6 @@ int setup(int argc, char **argv) {
 					threshold,				/* loop termination factor */
 				   &best_nclusters,			/* return: number between min and max */
 				   &cluster_centres,		/* return: [best_nclusters][nfeatures] */  
-				   &rmse,					/* Root Mean Squared Error */
-					isRMSE,					/* calculate RMSE */
 					nloops);				/* number of iteration for each number of clusters */		
     
 //	cluster_timing = omp_get_wtime() - cluster_timing;
