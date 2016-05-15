@@ -4,8 +4,8 @@ CC_FLAGS = -g -O2
 export OCL=$TACC_CUDA_DIR 
 export LD_LIBRARY_PATH=/opt/apps/intel/opencl/lib64:$LD_LIBRARY_PATH
 
-kmeans: cluster.o read_input.o kmeans_clustering.o rmse.o
-	$(CC) $(CC_FLAGS) -lOpenCL kmeans.cpp cluster.o read_input.o kmeans_clustering.o rmse.o -o kmeans -I$OCL/include -L$LD_LIBRARY_PATH
+kmeans: cluster.o read_input.o kmeans_clustering.o
+	$(CC) $(CC_FLAGS) -lOpenCL kmeans.cpp cluster.o read_input.o kmeans_clustering.o -o kmeans -I$OCL/include -L$LD_LIBRARY_PATH
 
 %.o: %.[ch]
 	$(CC) $(CC_FLAGS) $< -c
@@ -15,9 +15,6 @@ cluster.o: cluster.c
 	
 kmeans.o: kmeans.c 
 	$(CC) $(CC_FLAGS) read_input.c -c
-
-rmse.o: rmse.c
-	$(CC) $(CC_FLAGS) rmse.c -c
 
 clean:
 	rm -f *.o *~ kmeans *.linkinfo

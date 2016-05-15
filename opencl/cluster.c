@@ -32,54 +32,26 @@ int cluster(int      npoints,				/* number of data points */
     float **tmp_cluster_centres;			/* hold coordinates of cluster centers */
 	int		i;
 
-	/* allocate memory for membership */
     membership = (int*) malloc(npoints * sizeof(int));
 
-	/* sweep k from min to max_nclusters to find the best number of clusters */
 	for(nclusters = min_nclusters; nclusters <= max_nclusters; nclusters++)
 	{
-		if (nclusters > npoints) break;	/* cannot have more clusters than points */
+		if (nclusters > npoints)
+			break;
 
-		/* allocate device memory, invert data array (@ kmeans_cuda.cu) */
 		allocate(npoints, nfeatures, nclusters, features);
 
-		/* iterate nloops times for each number of clusters */
 		for(i = 0; i < nloops; i++)
 		{
-			/* initialize initial cluster centers, CUDA calls (@ kmeans_cuda.cu) */
-			tmp_cluster_centres = kmeans_clustering(features,
-													nfeatures,
-													npoints,
-													nclusters,
-													threshold,
-													membership);
-
-			if (*cluster_centres) {
+			tmp_cluster_centres = kmeans_clustering(features, nfeatures, npoints, nclusters, threshold, membership);
+			if (*cluster_centres)
+			{
 				free((*cluster_centres)[0]);
 				free(*cluster_centres);
 			}
 			*cluster_centres = tmp_cluster_centres;
-	        
-					
-			/* find the number of clusters with the best RMSE */
-			if(isRMSE)
-			{
-				rmse = rms_err(features,
-							   nfeatures,
-							   npoints,
-							   tmp_cluster_centres,
-							   nclusters);
-				
-				if(rmse < min_rmse_ref){
-					min_rmse_ref = rmse;			//update reference min RMSE
-					*min_rmse = min_rmse_ref;		//update return min RMSE
-					*best_nclusters = nclusters;	//update optimum number of clusters
-					index = i;						//update number of iteration to reach best RMSE
-				}
-			}			
+			deallocateMemory();
 		}
-		
-		deallocateMemory();							/* free device memory (@ kmeans_cuda.cu) */
 	}
 
     free(membership);

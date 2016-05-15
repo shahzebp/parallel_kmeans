@@ -24,8 +24,6 @@ void usage(char *argv0) {
         "    -n min_nclusters :minimum number of clusters allowed    [default=5]\n"
 		"    -t threshold     :threshold value                       [default=0.001]\n"
 		"    -l nloops        :iteration for each number of clusters [default=1]\n"
-		"    -b               :input file is in binary format\n"
-        "    -r               :calculate RMSE                        [default=off]\n"
 		"    -o               :output cluster center coordinates     [default=off]\n";
     fprintf(stderr, help, argv0);
     exit(-1);
@@ -57,22 +55,18 @@ int setup(int argc, char **argv) {
 		float	rmse;
 		
 		int		isOutput = 0;
-		//float	cluster_timing, io_timing;		
+		float	cluster_timing, io_timing;		
 
 		/* obtain command line arguments and change appropriate options */
 		while ( (opt=getopt(argc,argv,"i:t:m:n:l:bro"))!= EOF) {
         switch (opt) {
             case 'i': filename=optarg;
                       break;
-            case 'b': isBinaryFile = 1;
-                      break;            
             case 't': threshold=atof(optarg);
                       break;
             case 'm': max_nclusters = atoi(optarg);
                       break;
             case 'n': min_nclusters = atoi(optarg);
-                      break;
-			case 'r': isRMSE = 1;
                       break;
 			case 'o': isOutput = 1;
 					  break;
@@ -89,28 +83,6 @@ int setup(int argc, char **argv) {
 		
 	/* ============== I/O begin ==============*/
     /* get nfeatures and npoints */
-    //io_timing = omp_get_wtime();
-    if (isBinaryFile) {		//Binary file input
-        int infile;
-        if ((infile = open(filename, O_RDONLY, "0600")) == -1) {
-            fprintf(stderr, "Error: no such file (%s)\n", filename);
-            exit(1);
-        }
-        read(infile, &npoints,   sizeof(int));
-        read(infile, &nfeatures, sizeof(int));        
-
-        /* allocate space for features[][] and read attributes of all objects */
-        buf         = (float*) malloc(npoints*nfeatures*sizeof(float));
-        features    = (float**)malloc(npoints*          sizeof(float*));
-        features[0] = (float*) malloc(npoints*nfeatures*sizeof(float));
-        for (i=1; i<npoints; i++)
-            features[i] = features[i-1] + nfeatures;
-
-        read(infile, buf, npoints*nfeatures*sizeof(float));
-
-        close(infile);
-    }
-    else {
         FILE *infile;
         if ((infile = fopen(filename, "r")) == NULL) {
             fprintf(stderr, "Error: no such file (%s)\n", filename);
@@ -144,8 +116,6 @@ int setup(int argc, char **argv) {
             }            
         }
         fclose(infile);
-    }
-    //io_timing = omp_get_wtime() - io_timing;
 	
 	printf("\nI/O completed\n");
 	printf("\nNumber of objects: %d\n", npoints);
@@ -190,7 +160,7 @@ int setup(int argc, char **argv) {
 	/* =============== Command Line Output =============== */
 
 	/* cluster center coordinates
-	   :displayed only for when k=1
+	   :displayed only for when k=1*/
 	if((min_nclusters == max_nclusters) && (isOutput == 1)) {
 		printf("\n================= Centroid Coordinates =================\n");
 		for(i = 0; i < max_nclusters; i++){
@@ -201,13 +171,12 @@ int setup(int argc, char **argv) {
 			printf("\n\n");
 		}
 	}
-	*/
+
 	len = (float) ((max_nclusters - min_nclusters + 1)*nloops);
 
 	printf("Number of Iteration: %d\n", nloops);
-//	printf("Time for I/O: %.5fsec\n", io_timing);
 
-//	printf("Time for Entire Clustering: %.5fsec\n", cluster_timing);
+	printf("Time for Entire Clustering: %.5fsec\n", cluster_timing);
 
     printf("Time: %ld microseconds\n",
         ((tvalAfter.tv_sec - tvalBefore.tv_sec)*1000000L
@@ -216,29 +185,22 @@ int setup(int argc, char **argv) {
 	
 	if(min_nclusters != max_nclusters){
 		if(nloops != 1){									//range of k, multiple iteration
-			//printf("Average Clustering Time: %fsec\n",
-			//		cluster_timing / len);
+			printf("Average Clustering Time: %fsec\n",
+					cluster_timing / len);
 			printf("Best number of clusters is %d\n", best_nclusters);				
 		}
 		else{												//range of k, single iteration
-			//printf("Average Clustering Time: %fsec\n",
-			//		cluster_timing / len);
+			printf("Average Clustering Time: %fsec\n",
+					cluster_timing / len);
 			printf("Best number of clusters is %d\n", best_nclusters);				
 		}
 	}
 	else{
 		if(nloops != 1){									// single k, multiple iteration
-			//printf("Average Clustering Time: %.5fsec\n",
-			//		cluster_timing / nloops);
-			if(isRMSE)										// if calculated RMSE
-				printf("Number of trials to approach the best RMSE of %.3f is %d\n", rmse, index + 1);
-		}
-		else{												// single k, single iteration				
-			if(isRMSE)										// if calculated RMSE
-				printf("Root Mean Squared Error: %.3f\n", rmse);
+			printf("Average Clustering Time: %.5fsec\n",
+					cluster_timing / nloops);
 		}
 	}
-	
 
 	/* free up memory */
 	free(features[0]);
