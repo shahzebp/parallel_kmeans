@@ -98,8 +98,7 @@ int allocate(int n_points, int n_features, int n_clusters, float **feature)
 
 	const char * slist[2] = { source, 0 };
 	cl_program prog = clCreateProgramWithSource(context, 1, slist, NULL, &err);
-	if(err != CL_SUCCESS) { printf("ERROR: clCreateProgramWithSource() => %d\n", err); return -1; }
-	err = clBuildProgram(prog, 0, NULL, NULL, NULL, NULL);
+	clBuildProgram(prog, 0, NULL, NULL, NULL, NULL);
 
 	char * kernel_kmeans_c  = "kmeans_kernel_c";
 	char * kernel_swap  = "kmeans_swap";	
@@ -115,7 +114,7 @@ int allocate(int n_points, int n_features, int n_clusters, float **feature)
 	d_membership = clCreateBuffer(context, CL_MEM_READ_WRITE, n_points * sizeof(int), NULL, &err );
 		
 	//write buffers
-	err = clEnqueueWriteBuffer(cmd_queue, d_feature, 1, 0, n_points * n_features * sizeof(float), feature[0], 0, 0, 0);
+	clEnqueueWriteBuffer(cmd_queue, d_feature, 1, 0, n_points * n_features * sizeof(float), feature[0], 0, 0, 0);
 	
 	clSetKernelArg(kernel2, 0, sizeof(void *), (void*) &d_feature);
 	clSetKernelArg(kernel2, 1, sizeof(void *), (void*) &d_feature_swap);
@@ -123,7 +122,7 @@ int allocate(int n_points, int n_features, int n_clusters, float **feature)
 	clSetKernelArg(kernel2, 3, sizeof(cl_int), (void*) &n_features);
 	
 	size_t global_work[3] = { n_points, 1, 1 };
-	err = clEnqueueNDRangeKernel(cmd_queue, kernel2, 1, NULL, global_work, NULL, 0, 0, 0);
+	clEnqueueNDRangeKernel(cmd_queue, kernel2, 1, NULL, global_work, NULL, 0, 0, 0);
 	
 	membership_OCL = (int*) malloc(n_points * sizeof(int));
 }
@@ -155,9 +154,7 @@ int	kmeansOCL(float **feature, int n_features, int n_points, int n_clusters,
 	
 	size_t global_work[3] = { n_points, 1, 1 }; 
 	
-	err = clEnqueueWriteBuffer(cmd_queue, d_cluster, 1, 0, n_clusters * n_features * sizeof(float), clusters[0], 0, 0, 0);
-	if(err != CL_SUCCESS) { printf("ERROR: clEnqueueWriteBuffer d_cluster (size:%d) => %d\n", n_points, err); return -1; }
-
+	clEnqueueWriteBuffer(cmd_queue, d_cluster, 1, 0, n_clusters * n_features * sizeof(float), clusters[0], 0, 0, 0);
 	int size = 0; int offset = 0;
 					
 	clSetKernelArg(kernel_s, 0, sizeof(void *), (void*) &d_feature_swap);
@@ -169,11 +166,9 @@ int	kmeansOCL(float **feature, int n_features, int n_points, int n_clusters,
 	clSetKernelArg(kernel_s, 6, sizeof(cl_int), (void*) &offset);
 	clSetKernelArg(kernel_s, 7, sizeof(cl_int), (void*) &size);
 
-	err = clEnqueueNDRangeKernel(cmd_queue, kernel_s, 1, NULL, global_work, NULL, 0, 0, 0);
-	if(err != CL_SUCCESS) { printf("ERROR: clEnqueueNDRangeKernel()=>%d failed\n", err); return -1; }
+	clEnqueueNDRangeKernel(cmd_queue, kernel_s, 1, NULL, global_work, NULL, 0, 0, 0);
 	clFinish(cmd_queue);
-	err = clEnqueueReadBuffer(cmd_queue, d_membership, 1, 0, n_points * sizeof(int), membership_OCL, 0, 0, 0);
-	if(err != CL_SUCCESS) { printf("ERROR: Memcopy Out\n"); return -1; }
+	clEnqueueReadBuffer(cmd_queue, d_membership, 1, 0, n_points * sizeof(int), membership_OCL, 0, 0, 0);
 	
 	delta = 0;
 	for (i = 0; i < n_points; i++)
