@@ -11,11 +11,6 @@
 #include <unistd.h>
 #include <sys/time.h>
 
-extern double wtime(void);
-
-
-
-/*---< usage() >------------------------------------------------------------*/
 void usage(char *argv0) {
     char *help =
         "\nUsage: %s [switches] -i filename\n\n"
@@ -29,7 +24,6 @@ void usage(char *argv0) {
     exit(-1);
 }
 
-/*---< main() >-------------------------------------------------------------*/
 int setup(int argc, char **argv) {
 		int		opt;
  extern char   *optarg;
@@ -139,7 +133,6 @@ int setup(int argc, char **argv) {
 
     gettimeofday (&tvalBefore, NULL);
 
-    //cluster_timing = omp_get_wtime();		/* Total clustering time */
 	cluster_centres = NULL;
     index = cluster(npoints,				/* number of data points */
 					nfeatures,				/* number of features for each point */
@@ -151,7 +144,6 @@ int setup(int argc, char **argv) {
 				   &cluster_centres,		/* return: [best_nclusters][nfeatures] */  
 					nloops);				/* number of iteration for each number of clusters */		
     
-//	cluster_timing = omp_get_wtime() - cluster_timing;
     gettimeofday (&tvalAfter, NULL);
 
 

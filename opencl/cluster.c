@@ -7,8 +7,6 @@
 #include <omp.h>
 #include "kmeans.h"
 
-extern double wtime(void);
-
 int cluster(int npoints, int nfeatures, float **features, int min_nclusters, int max_nclusters,
 					float threshold, int *best_nclusters, float ***cluster_centres, int nloops)
 {    

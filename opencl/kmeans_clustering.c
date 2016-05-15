@@ -7,8 +7,6 @@
 
 #define RANDOM_MAX 2147483647
 
-extern double wtime(void);
-
 /*----< kmeans_clustering() >---------------------------------------------*/
 float** kmeans_clustering(float **feature,    /* in: [npoints][nfeatures] */
                           int     nfeatures,
