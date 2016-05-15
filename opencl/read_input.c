@@ -129,8 +129,7 @@ int setup(int argc, char **argv) {
 		int		min_nclusters=5;		/* default value */
 		int		nfeatures = 0;
 		int		npoints = 0;
-		float	len;
-		         
+
 		float **features;
 		float **cluster_centres=NULL;
 		int		i, j, index;
