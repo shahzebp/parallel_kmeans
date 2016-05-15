@@ -80,15 +80,8 @@ float** kmeans_clustering(float **feature,    /* in: [npoints][nfeatures] */
 	do {
         delta = 0.0;
 		// CUDA
-		delta = (float) kmeansOCL(feature,			/* in: [npoints][nfeatures] */
-								   nfeatures,		/* number of attributes for each point */
-								   npoints,			/* number of data points */
-								   nclusters,		/* number of clusters */
-								   membership,		/* which cluster the point belongs to */
-								   clusters,		/* out: [nclusters][nfeatures] */
-								   new_centers_len,	/* out: number of points in each cluster */
-								   new_centers		/* sum of points in each cluster */
-								   );
+		delta = (float) kmeansOCL(feature, nfeatures, npoints, nclusters,
+								membership, clusters, new_centers_len, new_centers);
 
 		/* replace old cluster centers with new_centers */
 		/* CPU side of reduction */
