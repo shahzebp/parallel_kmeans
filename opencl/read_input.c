@@ -17,25 +17,19 @@ int nclusters = 5;
 
 float** kmeans_clustering(float **feature, float threshold, int *membership)
 {
-    int      i, j, n = 0;
-    int      loop=0, temp;
-    int     *new_centers_len;
-    float    delta;
-    float  **clusters;
-    float  **new_centers;
+    int i, j, n=0, loop=0, temp, *new_centers_len, *initial, initial_points;
 
-    int     *initial;
-    int      initial_points;
+	float delta, **clusters, **new_centers;
 
     if (nclusters > npoints)
         nclusters = npoints;
 
-    clusters    = (float**) malloc(nclusters *             sizeof(float*));
-    clusters[0] = (float*)  malloc(nclusters * nfeatures * sizeof(float));
+    clusters = (float**) malloc(nclusters * sizeof(float*));
+    clusters[0] = (float*) malloc(nclusters * nfeatures * sizeof(float));
     for (i=1; i<nclusters; i++)
         clusters[i] = clusters[i-1] + nfeatures;
 
-    initial = (int *) malloc (npoints * sizeof(int));
+    initial = (int *)malloc(npoints * sizeof(int));
     for (i = 0; i < npoints; i++)
     {
         initial[i] = i;
