@@ -11,18 +11,6 @@
 #include <unistd.h>
 #include <sys/time.h>
 
-void usage(char *argv0) {
-    char *help =
-        "\nUsage: %s [switches] -i filename\n\n"
-		"    -i filename      :file containing data to be clustered\n"		
-		"    -m max_nclusters :maximum number of clusters allowed    [default=5]\n"
-        "    -n min_nclusters :minimum number of clusters allowed    [default=5]\n"
-		"    -l nloops        :iteration for each number of clusters [default=1]\n"
-		"    -o               :output cluster center coordinates     [default=off]\n";
-    fprintf(stderr, help, argv0);
-    exit(-1);
-}
-
 float** kmeans_clustering(float **feature, int nfeatures, int npoints,
                             int nclusters, float threshold, int *membership)
 {
