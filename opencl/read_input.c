@@ -140,10 +140,9 @@ int setup(int argc, char **argv) {
 		int		i, j, index;
 		int		nloops = 1;				/* default value */
 				
-		int		isOutput = 0;
+		int		isOutput = 1;
 		float	cluster_timing;
 
-		/* obtain command line arguments and change appropriate options */
 		while ( (opt=getopt(argc,argv,"i:t:m:n:l:o"))!= EOF) {
         switch (opt) {
             case 'i': filename=optarg;
@@ -152,21 +151,11 @@ int setup(int argc, char **argv) {
                       break;
             case 'n': min_nclusters = atoi(optarg);
                       break;
-			case 'o': isOutput = 1;
-					  break;
-		    case 'l': nloops = atoi(optarg);
-					  break;
-            case '?': usage(argv[0]);
-                      break;
-            default: usage(argv[0]);
+            default: 
                       break;
         }
     }
 
-    if (filename == 0) usage(argv[0]);
-		
-	/* ============== I/O begin ==============*/
-    /* get nfeatures and npoints */
         FILE *infile;
         if ((infile = fopen(filename, "r")) == NULL) {
             fprintf(stderr, "Error: no such file (%s)\n", filename);
@@ -225,13 +214,14 @@ int setup(int argc, char **argv) {
     gettimeofday (&tvalAfter, NULL);
 
 
-	if((min_nclusters == max_nclusters) && (isOutput == 1)) {
+	if(min_nclusters == max_nclusters)
+	{
 		printf("\nCentroid Coordinates\n");
-		for(i = 0; i < max_nclusters; i++){
+		for(i = 0; i < max_nclusters; i++)
+		{
 			printf("%d:", i);
-			for(j = 0; j < nfeatures; j++){
+			for(j = 0; j < nfeatures; j++)
 				printf(" %.2f", cluster_centres[i][j]);
-			}
 			printf("\n\n");
 		}
 	}
