@@ -10,12 +10,11 @@
 int cluster(int npoints, int nfeatures, float **features, int min_nclusters, int max_nclusters,
 					float threshold, int *best_nclusters, float ***cluster_centres, int nloops)
 {    
-	int		nclusters;						/* number of clusters k */	
-	int		index =0;						/* number of iteration to reach the best RMSE */
-	int		rmse;							/* RMSE for each clustering */
-    int    *membership;						/* which cluster a data point belongs to */
-    float **tmp_cluster_centres;			/* hold coordinates of cluster centers */
-	int		i;
+	int nclusters;
+	int index =0;
+    int *membership;
+    float **tmp_cluster_centres;
+	int i;
 
     membership = (int*) malloc(npoints * sizeof(int));
 
