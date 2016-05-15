@@ -184,14 +184,8 @@ int main( int argc, char** argv)
 
 }
 
-int	kmeansOCL(float **feature,    /* in: [npoints][nfeatures] */
-           int     n_features,
-           int     n_points,
-           int     n_clusters,
-           int    *membership,
-		   float **clusters,
-		   int     *new_centers_len,
-           float  **new_centers)	
+int	kmeansOCL(float **feature, int n_features, int n_points, int n_clusters,
+	int *membership, float **clusters, int *new_centers_len, float **new_centers)	
 {
   
 	int delta = 0;
