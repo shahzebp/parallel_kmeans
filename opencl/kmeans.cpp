@@ -34,7 +34,7 @@ float *feature_d;
 float *clusters_d;
 float *center_d;
 
-static int initialize(int use_gpu)
+static int initialize()
 {
 	cl_int result;
 	size_t size;
@@ -46,7 +46,7 @@ static int initialize(int use_gpu)
 	
 	cl_context_properties ctxprop[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platform_id, 0};
 
-	device_type = use_gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU;
+	device_type = CL_DEVICE_TYPE_GPU;
 
 	context = clCreateContextFromType( ctxprop, device_type, NULL, NULL, NULL );
 	
@@ -76,7 +76,7 @@ int allocate(int n_points, int n_features, int n_clusters, float **feature)
 	cl_int err = 0;	
 	int use_gpu = 1;
 
-	if(initialize(use_gpu)) return -1;
+	if(initialize()) return -1;
 
 	const char * slist[2] = { source, 0 };
 	cl_program prog = clCreateProgramWithSource(context, 1, slist, NULL, &err);
