@@ -5,20 +5,15 @@
 #include <math.h>
 #include <iostream>
 #include <string>
-#include "kmeans.h"
 
-#ifdef WIN
-	#include <windows.h>
-#else
-	#include <pthread.h>
-	#include <sys/time.h>
-	double gettime() {
-		struct timeval t;
-		gettimeofday(&t,NULL);
-		return t.tv_sec+t.tv_usec*1e-6;
-	}
-#endif
+#include <pthread.h>
+#include <sys/time.h>
 
+double gettime() {
+	struct timeval t;
+	gettimeofday(&t,NULL);
+	return t.tv_sec+t.tv_usec*1e-6;
+}
 
 #ifdef NV 
 	#include <oclUtils.h>
@@ -26,46 +21,13 @@
 	#include <CL/cl.h>
 #endif
 
-#ifndef FLT_MAX
 #define FLT_MAX 3.40282347e+38
-#endif
 
-// local variables
 static cl_context	    context;
 static cl_command_queue cmd_queue;
 static cl_device_type   device_type;
 static cl_device_id   * device_list;
 static cl_int           num_devices;
-
-static int initialize(int use_gpu)
-{
-	cl_int result;
-	size_t size;
-
-	// create OpenCL context
-	cl_platform_id platform_id;
-	if (clGetPlatformIDs(1, &platform_id, NULL) != CL_SUCCESS) { printf("ERROR: clGetPlatformIDs(1,*,0) failed\n"); return -1; }
-	cl_context_properties ctxprop[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platform_id, 0};
-	device_type = use_gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU;
-	context = clCreateContextFromType( ctxprop, device_type, NULL, NULL, NULL );
-	if( !context ) { printf("ERROR: clCreateContextFromType(%s) failed\n", use_gpu ? "GPU" : "CPU"); return -1; }
-
-	// get the list of GPUs
-	result = clGetContextInfo( context, CL_CONTEXT_DEVICES, 0, NULL, &size );
-	num_devices = (int) (size / sizeof(cl_device_id));
-	
-	if( result != CL_SUCCESS || num_devices < 1 ) { printf("ERROR: clGetContextInfo() failed\n"); return -1; }
-	device_list = new cl_device_id[num_devices];
-	if( !device_list ) { printf("ERROR: new cl_device_id[] failed\n"); return -1; }
-	result = clGetContextInfo( context, CL_CONTEXT_DEVICES, size, device_list, NULL );
-	if( result != CL_SUCCESS ) { printf("ERROR: clGetContextInfo() failed\n"); return -1; }
-
-	// create command queue for the first device
-	cmd_queue = clCreateCommandQueue( context, device_list[0], 0, NULL );
-	if( !cmd_queue ) { printf("ERROR: clCreateCommandQueue() failed\n"); return -1; }
-
-	return 0;
-}
 
 cl_mem d_feature;
 cl_mem d_feature_swap;
@@ -82,6 +44,36 @@ float *feature_d;
 float *clusters_d;
 float *center_d;
 
+static int initialize(int use_gpu)
+{
+	cl_int result;
+	size_t size;
+
+	cl_platform_id platform_id;
+	if (clGetPlatformIDs(1, &platform_id, NULL) != CL_SUCCESS) { 
+		printf("ERROR: clGetPlatformIDs(1,*,0) failed\n"); 
+		return -1; 
+	}
+	
+	cl_context_properties ctxprop[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platform_id, 0};
+
+	device_type = use_gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU;
+
+	context = clCreateContextFromType( ctxprop, device_type, NULL, NULL, NULL );
+	
+	result = clGetContextInfo( context, CL_CONTEXT_DEVICES, 0, NULL, &size );
+	num_devices = (int) (size / sizeof(cl_device_id));
+	
+	device_list = new cl_device_id[num_devices];
+
+	result = clGetContextInfo( context, CL_CONTEXT_DEVICES, size, device_list, NULL );
+
+	cmd_queue = clCreateCommandQueue( context, device_list[0], 0, NULL );
+
+	return 0;
+}
+
+
 int allocate(int n_points, int n_features, int n_clusters, float **feature)
 {
 
@@ -94,6 +86,7 @@ int allocate(int n_points, int n_features, int n_clusters, float **feature)
 	
 	cl_int err = 0;	
 	int use_gpu = 1;
+
 	if(initialize(use_gpu)) return -1;
 
 	const char * slist[2] = { source, 0 };
@@ -113,7 +106,6 @@ int allocate(int n_points, int n_features, int n_clusters, float **feature)
 	d_cluster = clCreateBuffer(context, CL_MEM_READ_WRITE, n_clusters * n_features  * sizeof(float), NULL, &err );
 	d_membership = clCreateBuffer(context, CL_MEM_READ_WRITE, n_points * sizeof(int), NULL, &err );
 		
-	//write buffers
 	clEnqueueWriteBuffer(cmd_queue, d_feature, 1, 0, n_points * n_features * sizeof(float), feature[0], 0, 0, 0);
 	
 	clSetKernelArg(kernel2, 0, sizeof(void *), (void*) &d_feature);
@@ -136,7 +128,6 @@ void deallocateMemory()
 	free(membership_OCL);
 
 }
-
 
 int main( int argc, char** argv) 
 {
