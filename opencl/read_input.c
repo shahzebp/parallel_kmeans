@@ -81,10 +81,8 @@ float** kmeans_clustering(float **feature, int *membership)
 
 int cluster(float **features, float ***cluster_centres)
 {
-    int index =0;
-    int *membership;
+    int index =0, *membership;
     float **tmp_cluster_centres;
-    int i;
 
     membership = (int*) malloc(npoints * sizeof(int));
 
