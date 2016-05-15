@@ -7,9 +7,6 @@ export LD_LIBRARY_PATH=/opt/apps/intel/opencl/lib64:$LD_LIBRARY_PATH
 kmeans: read_input.o
 	$(CC) $(CC_FLAGS) -lOpenCL kmeans.cpp read_input.o -o kmeans -I$OCL/include -L$LD_LIBRARY_PATH
 
-%.o: %.[ch]
-	$(CC) $(CC_FLAGS) $< -c
-
 kmeans.o: kmeans.c 
 	$(CC) $(CC_FLAGS) read_input.c -c
 
