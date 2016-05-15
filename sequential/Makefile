@@ -19,8 +19,7 @@ CC          = g++
 H_FILES     = kmeans.h
 
 SEQ_SRC     = seq_main.c   \
-              seq_kmeans.c \
-	      file_io.c
+	      		file_io.c
 
 SEQ_OBJ     = $(SEQ_SRC:%.c=%.o)
 
