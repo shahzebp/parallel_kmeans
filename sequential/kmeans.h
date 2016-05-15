@@ -10,6 +10,4 @@
         name[i] = name[i-1] + yDim;                         \
 } while (0)
 
-float** seq_kmeans(float**, int, int, int, float, int*);
-
 float** file_read(char*, int*, int*);
