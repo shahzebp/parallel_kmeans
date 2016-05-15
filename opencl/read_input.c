@@ -62,15 +62,11 @@ int setup(int argc, char **argv) {
         switch (opt) {
             case 'i': filename=optarg;
                       break;
-            case 'b': isBinaryFile = 1;
-                      break;            
             case 't': threshold=atof(optarg);
                       break;
             case 'm': max_nclusters = atoi(optarg);
                       break;
             case 'n': min_nclusters = atoi(optarg);
-                      break;
-			case 'r': isRMSE = 1;
                       break;
 			case 'o': isOutput = 1;
 					  break;
