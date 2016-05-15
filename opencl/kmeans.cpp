@@ -52,7 +52,6 @@ static int initialize(int use_gpu)
 
 	cl_platform_id platform_id;
 	if (clGetPlatformIDs(1, &platform_id, NULL) != CL_SUCCESS) { 
-		printf("ERROR: clGetPlatformIDs(1,*,0) failed\n"); 
 		return -1; 
 	}
 	
@@ -100,34 +99,27 @@ int allocate(int n_points, int n_features, int n_clusters, float **feature)
 	kernel_s = clCreateKernel(prog, kernel_kmeans_c, &err);  
 	kernel2 = clCreateKernel(prog, kernel_swap, &err);  
 		
-	clReleaseProgram(prog);	
+	size_t global_work[3] = { n_points, 1, 1 };
+	membership_OCL = (int*) malloc(n_points * sizeof(int));
+	
+    clReleaseProgram(prog);	
 	
 	d_feature = clCreateBuffer(context, CL_MEM_READ_WRITE, n_points * n_features * sizeof(float), NULL, &err );
-	d_feature_swap = clCreateBuffer(context, CL_MEM_READ_WRITE, n_points * n_features * sizeof(float), NULL, &err );
-	d_cluster = clCreateBuffer(context, CL_MEM_READ_WRITE, n_clusters * n_features  * sizeof(float), NULL, &err );
-	d_membership = clCreateBuffer(context, CL_MEM_READ_WRITE, n_points * sizeof(int), NULL, &err );
+	clSetKernelArg(kernel2, 0, sizeof(void *), (void*) &d_feature);
+	
+    d_feature_swap = clCreateBuffer(context, CL_MEM_READ_WRITE, n_points * n_features * sizeof(float), NULL, &err );
+	clSetKernelArg(kernel2, 1, sizeof(void *), (void*) &d_feature_swap);
+	
+    d_cluster = clCreateBuffer(context, CL_MEM_READ_WRITE, n_clusters * n_features  * sizeof(float), NULL, &err );
+	
+    d_membership = clCreateBuffer(context, CL_MEM_READ_WRITE, n_points * sizeof(int), NULL, &err );
+	clSetKernelArg(kernel2, 2, sizeof(cl_int), (void*) &n_points);
 		
 	clEnqueueWriteBuffer(cmd_queue, d_feature, 1, 0, n_points * n_features * sizeof(float), feature[0], 0, 0, 0);
-	
-	clSetKernelArg(kernel2, 0, sizeof(void *), (void*) &d_feature);
-	clSetKernelArg(kernel2, 1, sizeof(void *), (void*) &d_feature_swap);
-	clSetKernelArg(kernel2, 2, sizeof(cl_int), (void*) &n_points);
 	clSetKernelArg(kernel2, 3, sizeof(cl_int), (void*) &n_features);
 	
-	size_t global_work[3] = { n_points, 1, 1 };
-	clEnqueueNDRangeKernel(cmd_queue, kernel2, 1, NULL, global_work, NULL, 0, 0, 0);
+    clEnqueueNDRangeKernel(cmd_queue, kernel2, 1, NULL, global_work, NULL, 0, 0, 0);
 	
-	membership_OCL = (int*) malloc(n_points * sizeof(int));
-}
-
-void deallocateMemory()
-{
-	clReleaseMemObject(d_feature);
-	clReleaseMemObject(d_feature_swap);
-	clReleaseMemObject(d_cluster);
-	clReleaseMemObject(d_membership);
-	free(membership_OCL);
-
 }
 
 int main( int argc, char** argv) 

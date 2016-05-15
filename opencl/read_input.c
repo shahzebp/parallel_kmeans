@@ -76,11 +76,9 @@ float** kmeans_clustering(float **feature, int nfeatures, int npoints,
             new_centers_len[i] = 0;
         }
         c++;
-    } while ((delta > threshold) && (loop++ < 500));
-    printf("iterated %d times\n", c);
-    free(new_centers[0]);
-    free(new_centers);
-    free(new_centers_len);
+        if (delta < threshold)
+            break;
+    } while ((loop++ < 500));
 
     return clusters;
 }
@@ -100,22 +98,15 @@ int cluster(int npoints, int nfeatures, float **features, int nclusters,
 
 	allocate(npoints, nfeatures, nclusters, features);
 
-	tmp_cluster_centres = kmeans_clustering(features, nfeatures, npoints, nclusters, threshold, membership);
-	if (*cluster_centres)
-	{
-		free((*cluster_centres)[0]);
-		free(*cluster_centres);
-	}
+	tmp_cluster_centres = kmeans_clustering(features, 
+            nfeatures, npoints, nclusters, threshold, membership);
 	*cluster_centres = tmp_cluster_centres;
-	deallocateMemory();
-    free(membership);
 
     return index;
 }
 
 int setup(int argc, char **argv) {
 		int		opt;
- extern char   *optarg;
 		char   *filename = 0;
 		float  *buf;
 		char	line[1024];
@@ -173,7 +164,7 @@ int setup(int argc, char **argv) {
         fclose(infile);
 	
 	printf("\nNumber of objects: %d\n", npoints);
-	printf("Number of features: %d\n", nfeatures);	
+	printf("Number of coordinates: %d\n", nfeatures);	
 	
 	srand(7);
 	memcpy(features[0], buf, npoints*nfeatures*sizeof(float));
