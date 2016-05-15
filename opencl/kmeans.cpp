@@ -35,7 +35,6 @@ cl_mem d_feature_swap;
 cl_mem d_cluster;
 cl_mem d_membership;
 
-cl_kernel kernel;
 cl_kernel kernel_s;
 cl_kernel kernel2;
 
