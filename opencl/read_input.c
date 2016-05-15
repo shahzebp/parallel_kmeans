@@ -124,16 +124,15 @@ int setup(int argc, char **argv) {
 		char   *filename = 0;
 		float  *buf;
 		char	line[1024];
-		float	threshold = 0.001;		/* default value */
-		int		max_nclusters=5;		/* default value */
-		int		min_nclusters=5;		/* default value */
+		float	threshold = 0.001;
+		int		max_nclusters=5;
+		int		min_nclusters=5;
 		int		nfeatures = 0;
 		int		npoints = 0;
 
 		float **features;
 		float **cluster_centres=NULL;
 		int		i, j, index;
-		float	cluster_timing;
 
 		while ( (opt=getopt(argc,argv,"i:t:m:n:l:o"))!= EOF) {
         switch (opt) {
@@ -206,8 +205,6 @@ int setup(int argc, char **argv) {
 			printf(" %.2f", cluster_centres[i][j]);
 		printf("\n\n");
 	}
-
-	printf("Time for Entire Clustering: %.5fsec\n", cluster_timing);
 
     printf("Time: %ld microseconds\n",
         ((tvalAfter.tv_sec - tvalBefore.tv_sec)*1000000L
