@@ -3,15 +3,8 @@
 #endif
 
 __kernel void
-kmeans_kernel_c(__global float  *feature,   
-			  __global float  *clusters,
-			  __global int    *membership,
-			    int     npoints,
-				int     nclusters,
-				int     nfeatures,
-				int		offset,
-				int		size
-			  ) 
+kmeans_kernel_c(__global float  *feature, __global float *clusters, __global int *membership, int npoints,
+				int nclusters, int nfeatures, int offset, int size) 
 {
 	unsigned int point_id = get_global_id(0);
     int index = 0;
@@ -35,20 +28,15 @@ kmeans_kernel_c(__global float  *feature,
 					
 				}
 			}
-		  //printf("%d\n", index);
 		  membership[point_id] = index;
 		}	
 	
 	return;
 }
 
-__kernel void
-kmeans_swap(__global float  *feature,   
-			__global float  *feature_swap,
-			int     npoints,
-			int     nfeatures
-){
-
+__kernel void kmeans_swap(__global float  *feature, __global float  *feature_swap,
+			int npoints, int nfeatures)
+{
 	unsigned int tid = get_global_id(0);
 	for(int i = 0; i <  nfeatures; i++)
 		feature_swap[i * npoints + tid] = feature[tid * nfeatures + i];
