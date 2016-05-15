@@ -57,7 +57,7 @@ int setup(int argc, char **argv) {
 		float	rmse;
 		
 		int		isOutput = 0;
-		//float	cluster_timing, io_timing;		
+		float	cluster_timing, io_timing;		
 
 		/* obtain command line arguments and change appropriate options */
 		while ( (opt=getopt(argc,argv,"i:t:m:n:l:bro"))!= EOF) {
@@ -190,7 +190,7 @@ int setup(int argc, char **argv) {
 	/* =============== Command Line Output =============== */
 
 	/* cluster center coordinates
-	   :displayed only for when k=1
+	   :displayed only for when k=1*/
 	if((min_nclusters == max_nclusters) && (isOutput == 1)) {
 		printf("\n================= Centroid Coordinates =================\n");
 		for(i = 0; i < max_nclusters; i++){
@@ -201,13 +201,12 @@ int setup(int argc, char **argv) {
 			printf("\n\n");
 		}
 	}
-	*/
+
 	len = (float) ((max_nclusters - min_nclusters + 1)*nloops);
 
 	printf("Number of Iteration: %d\n", nloops);
-//	printf("Time for I/O: %.5fsec\n", io_timing);
 
-//	printf("Time for Entire Clustering: %.5fsec\n", cluster_timing);
+	printf("Time for Entire Clustering: %.5fsec\n", cluster_timing);
 
     printf("Time: %ld microseconds\n",
         ((tvalAfter.tv_sec - tvalBefore.tv_sec)*1000000L
@@ -216,20 +215,20 @@ int setup(int argc, char **argv) {
 	
 	if(min_nclusters != max_nclusters){
 		if(nloops != 1){									//range of k, multiple iteration
-			//printf("Average Clustering Time: %fsec\n",
-			//		cluster_timing / len);
+			printf("Average Clustering Time: %fsec\n",
+					cluster_timing / len);
 			printf("Best number of clusters is %d\n", best_nclusters);				
 		}
 		else{												//range of k, single iteration
-			//printf("Average Clustering Time: %fsec\n",
-			//		cluster_timing / len);
+			printf("Average Clustering Time: %fsec\n",
+					cluster_timing / len);
 			printf("Best number of clusters is %d\n", best_nclusters);				
 		}
 	}
 	else{
 		if(nloops != 1){									// single k, multiple iteration
-			//printf("Average Clustering Time: %.5fsec\n",
-			//		cluster_timing / nloops);
+			printf("Average Clustering Time: %.5fsec\n",
+					cluster_timing / nloops);
 			if(isRMSE)										// if calculated RMSE
 				printf("Number of trials to approach the best RMSE of %.3f is %d\n", rmse, index + 1);
 		}
