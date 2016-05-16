@@ -46,9 +46,9 @@ float** kmeans_clustering(float **feature, int *membership)
         nclusters = npoints;
 
     size_t rsize1 = nclusters * sizeof(float*);
-    clusters = (float**) malloc(rsize);
+    clusters = (float**) malloc(rsize1);
 
-    size_T rsize2 = nclusters * ndimensions * sizeof(float);
+    size_t rsize2 = nclusters * ndimensions * sizeof(float);
     clusters[0] = (float*) malloc(rsize2);
     
     for (i=1; i<nclusters; i++) {
