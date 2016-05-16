@@ -204,6 +204,7 @@ int allocate(int n_points, int n_features, int n_clusters, float **feature)
 
 int main( int argc, char** argv) 
 {
+	    FILE *infile;
 	int opt, i, j;
 		char   *filename = 0;
 		char	line[1024];
@@ -221,30 +222,39 @@ int main( int argc, char** argv)
         }
     }
 
-    FILE *infile;
-    if ((infile = fopen(filename, "r")) == NULL) {
-        fprintf(stderr, "Error: no such file (%s)\n", filename);
-        exit(1);
+
+    if (NULL == (infile = fopen(filename, "r"))) {
+        return -1;
 	}		
-    while (fgets(line, 1024, infile) != NULL)
+    while (NULL != fgets(line, 1024, infile))
 		if (strtok(line, " \t\n") != 0)
             npoints++;			
+
     rewind(infile);
-    while (fgets(line, 1024, infile) != NULL) {
-        if (strtok(line, " \t\n") != 0) {
-            /* ignore the id (first attribute): nfeatures = 1; */
+    
+    while (NULL != fgets(line, 1024, infile)) {
+        if (0 != strtok(line, " \t\n")) {
             while (strtok(NULL, " ,\t\n") != NULL) nfeatures++;
             break;
         }
     }        
 
-    buf         = (float*) malloc(npoints*nfeatures*sizeof(float));
-    features    = (float**)malloc(npoints*          sizeof(float*));
-    features[0] = (float*) malloc(npoints*nfeatures*sizeof(float));
+    size_t rawf = npoints*nfeatures*sizeof(float);
+    buf         = (float*) malloc(rawf);
+
+    size_t rawfp = npoints*          sizeof(float*);
+    features    = (float**)malloc(rawfp);
+
+    size_t rawnfp = npoints*nfeatures*sizeof(float);
+    features[0] = (float*) malloc(rawnfp);
+
     for (i=1; i<npoints; i++)
         features[i] = features[i-1] + nfeatures;
+    
     rewind(infile);
+    
     i = 0;
+    
     while (fgets(line, 1024, infile) != NULL) {
         if (strtok(line, " \t\n") == NULL) continue;            
         for (j=0; j<nfeatures; j++) {
@@ -252,6 +262,7 @@ int main( int argc, char** argv)
             i++;
         }            
     }
+    
     fclose(infile);
 	
 	srand(7);
