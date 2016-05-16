@@ -2,7 +2,6 @@
 #include <string.h>
 #include <pthread.h>
 #include <sys/time.h>
-#include "kmeans.h"
 #include <stdlib.h>
 #include <math.h>
 #include <iostream>
@@ -33,6 +32,51 @@ int ndimensions = 0;
 int npoints = 0;
 int nclusters = 5;
 float threshold = 0.001;
+
+int	k_means_CL(float **dimension, int n_dimensions, int n_points, int n_clusters,
+	int *relationship, float **clusters, int *curr_dimensions_len, float **curr_dimensions)	
+{
+	size_t global_work[3] = { n_points, 1, 1 }; 
+
+	clSetKernelArg(kernel_s, 3, sizeof(cl_int), (void*) &n_points);
+	
+	clEnqueueWriteBuffer(cmd_queue, cluster_dev, 1, 0, n_clusters * n_dimensions * sizeof(float), clusters[0], 0, 0, 0);
+					
+	clSetKernelArg(kernel_s, 0, sizeof(void *), (void*) &d_dimension_swap);
+	clSetKernelArg(kernel_s, 1, sizeof(void *), (void*) &cluster_dev);
+	
+	clSetKernelArg(kernel_s, 4, sizeof(cl_int), (void*) &n_clusters);
+	int conv_point = 0;
+
+	clSetKernelArg(kernel_s, 5, sizeof(cl_int), (void*) &n_dimensions);
+
+	clSetKernelArg(kernel_s, 2, sizeof(void *), (void*) &relationship_dev);
+	int offset = 0;
+	clSetKernelArg(kernel_s, 6, sizeof(cl_int), (void*) &offset);
+
+	int size = 0;
+	clSetKernelArg(kernel_s, 7, sizeof(cl_int), (void*) &size);
+
+	clEnqueueNDRangeKernel(cmd_queue, kernel_s, 1, NULL, global_work, NULL, 0, 0, 0);
+	clFinish(cmd_queue);
+	clEnqueueReadBuffer(cmd_queue, relationship_dev, 1, 0, n_points * sizeof(int), relationship_OCL, 0, 0, 0);
+	
+	
+	for (int i = 0; i < n_points; i++)
+	{
+		curr_dimensions_len[relationship_OCL[i]]++;
+		if (relationship_OCL[i] != relationship[i]) {
+			relationship[i] = relationship_OCL[i];
+			conv_point = conv_point + 1;
+		}
+
+		for (int j = 0; j < n_dimensions; j++) {
+			curr_dimensions[relationship_OCL[i]][j] += dimension[i][j];
+		}
+	}
+
+	return conv_point;
+}
 
 float** k_means_cluster_op(float **dimension, int *relationship)
 {
@@ -294,49 +338,4 @@ int main( int argc, char** argv)
     fclose(infile);
 
     return(0);
-}
-
-int	k_means_CL(float **dimension, int n_dimensions, int n_points, int n_clusters,
-	int *relationship, float **clusters, int *curr_dimensions_len, float **curr_dimensions)	
-{
-	size_t global_work[3] = { n_points, 1, 1 }; 
-
-	clSetKernelArg(kernel_s, 3, sizeof(cl_int), (void*) &n_points);
-	
-	clEnqueueWriteBuffer(cmd_queue, cluster_dev, 1, 0, n_clusters * n_dimensions * sizeof(float), clusters[0], 0, 0, 0);
-					
-	clSetKernelArg(kernel_s, 0, sizeof(void *), (void*) &d_dimension_swap);
-	clSetKernelArg(kernel_s, 1, sizeof(void *), (void*) &cluster_dev);
-	
-	clSetKernelArg(kernel_s, 4, sizeof(cl_int), (void*) &n_clusters);
-	int conv_point = 0;
-
-	clSetKernelArg(kernel_s, 5, sizeof(cl_int), (void*) &n_dimensions);
-
-	clSetKernelArg(kernel_s, 2, sizeof(void *), (void*) &relationship_dev);
-	int offset = 0;
-	clSetKernelArg(kernel_s, 6, sizeof(cl_int), (void*) &offset);
-
-	int size = 0;
-	clSetKernelArg(kernel_s, 7, sizeof(cl_int), (void*) &size);
-
-	clEnqueueNDRangeKernel(cmd_queue, kernel_s, 1, NULL, global_work, NULL, 0, 0, 0);
-	clFinish(cmd_queue);
-	clEnqueueReadBuffer(cmd_queue, relationship_dev, 1, 0, n_points * sizeof(int), relationship_OCL, 0, 0, 0);
-	
-	
-	for (int i = 0; i < n_points; i++)
-	{
-		curr_dimensions_len[relationship_OCL[i]]++;
-		if (relationship_OCL[i] != relationship[i]) {
-			relationship[i] = relationship_OCL[i];
-			conv_point = conv_point + 1;
-		}
-
-		for (int j = 0; j < n_dimensions; j++) {
-			curr_dimensions[relationship_OCL[i]][j] += dimension[i][j];
-		}
-	}
-
-	return conv_point;
 }
