@@ -248,24 +248,24 @@ int main( int argc, char** argv)
     size_t rawnfp = npoints*nfeatures*sizeof(float);
     features[0] = (float*) malloc(rawnfp);
 
-    for (i=1; i<npoints; i++)
-        features[i] = features[i-1] + nfeatures;
-    
+    for (i=1; i<npoints; i++) {
+    	float *temp = features[i-1] + nfeatures;
+        features[i] = temp;
+    }
+    i = 0;
+
     rewind(infile);
     
-    i = 0;
-    
-    while (fgets(line, 1024, infile) != NULL) {
-        if (strtok(line, " \t\n") == NULL) continue;            
+    while (NULL != fgets(line, 1024, infile)) {
+        if (NULL == strtok(line, " \t\n")) continue;            
         for (j=0; j<nfeatures; j++) {
             buf[i] = atof(strtok(NULL, " ,\t\n"));             
             i++;
         }            
     }
     
-    fclose(infile);
-	
-	srand(7);
+	//srand(7);
+
 	memcpy(features[0], buf, npoints*nfeatures*sizeof(float));
 
 	struct timeval tvalBefore, tvalAfter;
@@ -289,7 +289,8 @@ int main( int argc, char** argv)
         ((tvalAfter.tv_sec - tvalBefore.tv_sec)*1000000L
         +tvalAfter.tv_usec) - tvalBefore.tv_usec
         );
-    
+    fclose(infile);
+
     return(0);
 }
 
