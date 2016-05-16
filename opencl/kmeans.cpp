@@ -89,16 +89,18 @@ float** kmeans_clustering(float **feature, int *membership)
 
     new_centers[0] = (float*)  calloc(nclusters * nfeatures, ncountrawsize);
 
-    for (i=1; i<nclusters; i++)
-        new_centers[i] = new_centers[i-1] + nfeatures;
+    for (i=1; i<nclusters; i++) {
+    	float *temp = new_centers[i-1] + nfeatures;
+        new_centers[i] = temp;
+    }
 
     do {
-        delta = 0.0;
+        delta = 0;
         delta = (float) kmeansOCL(feature, nfeatures, npoints, nclusters,
                                 membership, clusters, new_centers_len, new_centers);
 
-        for (i=0; i<nclusters; i++) {
-            for (j=0; j<nfeatures; j++) {
+        for (int i=0; i<nclusters; i++) {
+            for (int j=0; j<nfeatures; j++) {
                 if (new_centers_len[i] > 0) {
                 	float temp = new_centers[i][j] / new_centers_len[i];
                     clusters[i][j] = temp;
