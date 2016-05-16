@@ -48,19 +48,24 @@ float** kmeans_clustering(float **feature, int *membership)
     size_t r2 = nclusters * nfeatures * sizeof(float);
     clusters[0] = (float*) malloc(r2);
 
-    for (i=1; i<nclusters; i++)
-        clusters[i] = clusters[i-1] + nfeatures;
+    for (i=1; i<nclusters; i++) {
+    	float *temp = clusters[i-1] + nfeatures;
+        clusters[i] = temp;
+    }
 
-    initial = (int *)malloc(npoints * sizeof(int));
+    size_t rawnp = npoints * sizeof(int);
+    initial = (int *)malloc(rawnp);
+
     initial_points = npoints;
 
     for (i = 0; i < npoints; i++)
         initial[i] = i;
 
-    for (i=0; i<nclusters && initial_points >= 0; i++) {
-
-        for (j=0; j<nfeatures; j++)
-            clusters[i][j] = feature[initial[n]][j];
+    for (i=0; 0 <= initial_points && i<nclusters; i++) {
+        for (j=0; j<nfeatures; j++) {
+        	float temp = feature[initial[n]][j];
+            clusters[i][j] = temp;
+        }
 
         int temp = initial[n];
         initial_points--;
@@ -70,9 +75,6 @@ float** kmeans_clustering(float **feature, int *membership)
 
         n = n + 1;
     }
-
-    //for (i=0; i < npoints; i++)
-    //  membership[i] = -1;
 
   	memset(membership, -1, npoints * sizeof(int));
 
@@ -263,8 +265,6 @@ int main( int argc, char** argv)
             i++;
         }            
     }
-    
-	//srand(7);
 
 	memcpy(features[0], buf, npoints*nfeatures*sizeof(float));
 
