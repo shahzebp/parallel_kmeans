@@ -29,7 +29,7 @@ int   *membership_OCL, *membership_d;
 float *feature_d, *clusters_d, *center_d;
 int sourcesize = 1024*1024;
 
-int ndimensions = 0;
+int nfeatures = 0;
 int npoints = 0;
 int nclusters = 5;
 float threshold = 0.001;
@@ -40,43 +40,32 @@ float** kmeans_clustering(float **feature, int *membership)
 
 	float delta, **clusters, **new_centers;
 
-    if (nclusters <= npoints)
-    	nclusters = 5;
-    else
+    if (nclusters > npoints)
         nclusters = npoints;
 
-    size_t rsize1 = nclusters * sizeof(float*);
-    clusters = (float**) malloc(rsize1);
-
-    size_t rsize2 = nclusters * ndimensions * sizeof(float);
-    clusters[0] = (float*) malloc(rsize2);
-    
-    for (i=1; i<nclusters; i++) {
-    	float *next = clusters[i-1] + ndimensions;
-        clusters[i] = next;
-    }
+    clusters = (float**) malloc(nclusters * sizeof(float*));
+    clusters[0] = (float*) malloc(nclusters * nfeatures * sizeof(float));
+    for (i=1; i<nclusters; i++)
+        clusters[i] = clusters[i-1] + nfeatures;
 
     initial = (int *)malloc(npoints * sizeof(int));
-
-	initial_points = npoints;
-
     for (i = 0; i < npoints; i++)
-        initial[i] = i;    
+    {
+        initial[i] = i;
+    }
+
+    initial_points = npoints;
 
     for (i=0; i<nclusters && initial_points >= 0; i++) {
 
-        for (j=0; j<ndimensions; j++)
+        for (j=0; j<nfeatures; j++)
             clusters[i][j] = feature[initial[n]][j];
 
         temp = initial[n];
-
-		initial_points--;
-
-        initial[n] = initial[initial_points];
-
-        initial[initial_points] = temp;
-
-        n =  n + 1;
+        initial[n] = initial[initial_points-1];
+        initial[initial_points-1] = temp;
+        initial_points--;
+        n++;
     }
 
     for (i=0; i < npoints; i++)
@@ -85,21 +74,17 @@ float** kmeans_clustering(float **feature, int *membership)
     new_centers_len = (int*) calloc(nclusters, sizeof(int));
 
     new_centers    = (float**) malloc(nclusters *            sizeof(float*));
-    
-    new_centers[0] = (float*)  calloc(nclusters * ndimensions, sizeof(float));
-    
-    for (i=1; i<nclusters; i++) {
-    	float *next = new_centers[i-1] + ndimensions;
-        new_centers[i] = next;
-    }
+    new_centers[0] = (float*)  calloc(nclusters * nfeatures, sizeof(float));
+    for (i=1; i<nclusters; i++)
+        new_centers[i] = new_centers[i-1] + nfeatures;
 
     do {
         delta = 0.0;
-        delta = (float) kmeansOCL(feature, ndimensions, npoints, nclusters,
+        delta = (float) kmeansOCL(feature, nfeatures, npoints, nclusters,
                                 membership, clusters, new_centers_len, new_centers);
 
         for (i=0; i<nclusters; i++) {
-            for (j=0; j<ndimensions; j++) {
+            for (j=0; j<nfeatures; j++) {
                 if (new_centers_len[i] > 0)
                     clusters[i][j] = new_centers[i][j] / new_centers_len[i];
                 new_centers[i][j] = 0.0;
@@ -113,7 +98,7 @@ float** kmeans_clustering(float **feature, int *membership)
     return clusters;
 }
 
-void cluster(float **dimensions, float ***cluster_centres)
+void cluster(float **features, float ***cluster_centres)
 {
     int *membership;
     float **tmp_cluster_centres;
@@ -123,9 +108,9 @@ void cluster(float **dimensions, float ***cluster_centres)
 	if (nclusters > npoints)
 		return;
 
-	allocate(npoints, ndimensions, nclusters, dimensions);
+	allocate(npoints, nfeatures, nclusters, features);
 
-	tmp_cluster_centres = kmeans_clustering(dimensions, membership);
+	tmp_cluster_centres = kmeans_clustering(features, membership);
 	*cluster_centres = tmp_cluster_centres;
 }
 
@@ -135,7 +120,6 @@ static int initialize()
 	size_t size;
 
 	cl_platform_id platform_id;
-	
 	if (clGetPlatformIDs(1, &platform_id, NULL) != CL_SUCCESS) { 
 		return -1; 
 	}
@@ -159,7 +143,7 @@ static int initialize()
 }
 
 
-int allocate(int n_points, int n_dimensions, int n_clusters, float **feature)
+int allocate(int n_points, int n_features, int n_clusters, float **feature)
 {
 
 	char * source = (char *)calloc(sourcesize, sizeof(char)); 
@@ -186,103 +170,83 @@ int allocate(int n_points, int n_dimensions, int n_clusters, float **feature)
 	
     clReleaseProgram(prog);	
 	
-	d_feature = clCreateBuffer(context, CL_MEM_READ_WRITE, n_points * n_dimensions * sizeof(float), NULL, &err );
+	d_feature = clCreateBuffer(context, CL_MEM_READ_WRITE, n_points * n_features * sizeof(float), NULL, &err );
 	clSetKernelArg(kernel2, 0, sizeof(void *), (void*) &d_feature);
 	
-    d_feature_swap = clCreateBuffer(context, CL_MEM_READ_WRITE, n_points * n_dimensions * sizeof(float), NULL, &err );
+    d_feature_swap = clCreateBuffer(context, CL_MEM_READ_WRITE, n_points * n_features * sizeof(float), NULL, &err );
 	clSetKernelArg(kernel2, 1, sizeof(void *), (void*) &d_feature_swap);
 	
-    cluster_dev = clCreateBuffer(context, CL_MEM_READ_WRITE, n_clusters * n_dimensions  * sizeof(float), NULL, &err );
+    cluster_dev = clCreateBuffer(context, CL_MEM_READ_WRITE, n_clusters * n_features  * sizeof(float), NULL, &err );
 	
     relationship_dev = clCreateBuffer(context, CL_MEM_READ_WRITE, n_points * sizeof(int), NULL, &err );
 	clSetKernelArg(kernel2, 2, sizeof(cl_int), (void*) &n_points);
 		
-	clEnqueueWriteBuffer(cmd_queue, d_feature, 1, 0, n_points * n_dimensions * sizeof(float), feature[0], 0, 0, 0);
-	clSetKernelArg(kernel2, 3, sizeof(cl_int), (void*) &n_dimensions);
+	clEnqueueWriteBuffer(cmd_queue, d_feature, 1, 0, n_points * n_features * sizeof(float), feature[0], 0, 0, 0);
+	clSetKernelArg(kernel2, 3, sizeof(cl_int), (void*) &n_features);
 	
     clEnqueueNDRangeKernel(cmd_queue, kernel2, 1, NULL, global_work, NULL, 0, 0, 0);	
 }
 
 int main( int argc, char** argv) 
 {
-	FILE *infile;
 	int opt, i, j;
 		char   *filename = 0;
 		char	line[1024];
 
-		float *buf, **dimensions, **cluster_centres=NULL;
+		float *buf, **features, **cluster_centres=NULL;
 
-	while ( (opt=getopt(argc,argv,"i:m:"))!= EOF) {
-    switch (opt) {
-        case 'i': filename=optarg;
-                  break;
-        case 'm': nclusters = atoi(optarg);
-                  break;
-        default: 
-                  break;
-    }
-    }
-
-    if (NULL == (infile = fopen(filename, "r"))) {
-        return -1;
-	}		
-
-    while (fgets(line, 1024, infile) != NULL) {
-		if (strtok(line, " \t\n") != 0) {
-			i++;
-            npoints++;			
-		}
-    }
-    
-    rewind(infile);
-    
-    buf         = (float*) malloc(npoints * ndimensions * sizeof(float));
-
-    while (fgets(line, 1024, infile) != NULL) {
-        if (strtok(line, " \t\n") != 0) {
-            while (strtok(NULL, " ,\t\n") != NULL) ndimensions++;
-            break;
+		while ( (opt=getopt(argc,argv,"i:m:"))!= EOF) {
+        switch (opt) {
+            case 'i': filename=optarg;
+                      break;
+            case 'm': nclusters = atoi(optarg);
+                      break;
+            default: 
+                      break;
         }
-    }        
-
-	i = 0;
-
-	size_t rawsize = npoints * sizeof(float*);
-    dimensions    = (float**)malloc(rawsize);
-    size_t rawsize2 = npoints * ndimensions * sizeof(float);
-    dimensions[0] = (float*) malloc(rawsize2);
- 
-
-    for (i = 1; i<npoints; i++){
-    	float *next = dimensions[i-1] + ndimensions;
-        dimensions[i] = next;
     }
-    
-    rewind(infile);
 
-    i = 0;
-    
-    while (NULL != (fgets(line, 1024, infile))) {
-        if (NULL == (strtok(line, " \t\n"))) 
-        	continue;            
-        
-        for (j = 0; j < ndimensions; j++) {
-            buf[i] = atof(strtok(NULL, " ,\t\n"));             
-            i++;
-        }            
-    }
-    
-    fclose(infile);
+        FILE *infile;
+        if ((infile = fopen(filename, "r")) == NULL) {
+            fprintf(stderr, "Error: no such file (%s)\n", filename);
+            exit(1);
+		}		
+        while (fgets(line, 1024, infile) != NULL)
+			if (strtok(line, " \t\n") != 0)
+                npoints++;			
+        rewind(infile);
+        while (fgets(line, 1024, infile) != NULL) {
+            if (strtok(line, " \t\n") != 0) {
+                /* ignore the id (first attribute): nfeatures = 1; */
+                while (strtok(NULL, " ,\t\n") != NULL) nfeatures++;
+                break;
+            }
+        }        
+
+        buf         = (float*) malloc(npoints*nfeatures*sizeof(float));
+        features    = (float**)malloc(npoints*          sizeof(float*));
+        features[0] = (float*) malloc(npoints*nfeatures*sizeof(float));
+        for (i=1; i<npoints; i++)
+            features[i] = features[i-1] + nfeatures;
+        rewind(infile);
+        i = 0;
+        while (fgets(line, 1024, infile) != NULL) {
+            if (strtok(line, " \t\n") == NULL) continue;            
+            for (j=0; j<nfeatures; j++) {
+                buf[i] = atof(strtok(NULL, " ,\t\n"));             
+                i++;
+            }            
+        }
+        fclose(infile);
 	
 	srand(7);
-	
-	memcpy(dimensions[0], buf, npoints*ndimensions*sizeof(float));
+	memcpy(features[0], buf, npoints*nfeatures*sizeof(float));
 
 	struct timeval tvalBefore, tvalAfter;
     gettimeofday (&tvalBefore, NULL);
 
 	cluster_centres = NULL;
-    cluster(dimensions, &cluster_centres);
+    cluster(features, &cluster_centres);
     
     gettimeofday (&tvalAfter, NULL);
 
@@ -290,7 +254,7 @@ int main( int argc, char** argv)
 	for(int l=0;l<nclusters;l++)
 	{
 		printf("Centroid Number %d: ", l);
-		for(int m=0;m<ndimensions;m++)
+		for(int m=0;m<nfeatures;m++)
 			printf(" %0.4f", cluster_centres[l][m]);
 		printf("\n");
 	}
@@ -303,14 +267,14 @@ int main( int argc, char** argv)
     return(0);
 }
 
-int	kmeansOCL(float **feature, int n_dimensions, int n_points, int n_clusters,
+int	kmeansOCL(float **feature, int n_features, int n_points, int n_clusters,
 	int *membership, float **clusters, int *new_centers_len, float **new_centers)	
 {
 	size_t global_work[3] = { n_points, 1, 1 }; 
 
 	clSetKernelArg(kernel_s, 3, sizeof(cl_int), (void*) &n_points);
 	
-	clEnqueueWriteBuffer(cmd_queue, cluster_dev, 1, 0, n_clusters * n_dimensions * sizeof(float), clusters[0], 0, 0, 0);
+	clEnqueueWriteBuffer(cmd_queue, cluster_dev, 1, 0, n_clusters * n_features * sizeof(float), clusters[0], 0, 0, 0);
 					
 	clSetKernelArg(kernel_s, 0, sizeof(void *), (void*) &d_feature_swap);
 	clSetKernelArg(kernel_s, 1, sizeof(void *), (void*) &cluster_dev);
@@ -318,7 +282,7 @@ int	kmeansOCL(float **feature, int n_dimensions, int n_points, int n_clusters,
 	clSetKernelArg(kernel_s, 4, sizeof(cl_int), (void*) &n_clusters);
 	int conv_point = 0;
 
-	clSetKernelArg(kernel_s, 5, sizeof(cl_int), (void*) &n_dimensions);
+	clSetKernelArg(kernel_s, 5, sizeof(cl_int), (void*) &n_features);
 
 	clSetKernelArg(kernel_s, 2, sizeof(void *), (void*) &relationship_dev);
 	int offset = 0;
@@ -340,7 +304,7 @@ int	kmeansOCL(float **feature, int n_dimensions, int n_points, int n_clusters,
 			conv_point = conv_point + 1;
 		}
 
-		for (int j = 0; j < n_dimensions; j++) {
+		for (int j = 0; j < n_features; j++) {
 			new_centers[membership_OCL[i]][j] += feature[i][j];
 		}
 	}

@@ -9,5 +9,5 @@ N_THREADS=1024 N_VERTICES=8192
 
 for k in 2 4
 do
-    ./kmeans -o -i inp_100000_2.txt -n $k -m $k >> out
+    ./kmeans -i input -m $k >> out
 done
