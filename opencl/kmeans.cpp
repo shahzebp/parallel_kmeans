@@ -78,6 +78,34 @@ int	k_means_CL(float **dimension, int n_dimensions, int n_points, int n_clusters
 	return conv_point;
 }
 
+static int initialize()
+{
+	cl_int result;
+	size_t size;
+
+	cl_platform_id platform_id;
+	if (clGetPlatformIDs(1, &platform_id, NULL) != CL_SUCCESS) { 
+		return -1; 
+	}
+	
+	cl_context_properties ctxprop[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platform_id, 0};
+
+	device_type = CL_DEVICE_TYPE_GPU;
+
+	context = clCreateContextFromType( ctxprop, device_type, NULL, NULL, NULL );
+	
+	result = clGetContextInfo( context, CL_CONTEXT_DEVICES, 0, NULL, &size );
+	num_devices = (int) (size / sizeof(cl_device_id));
+	
+	device_list = new cl_device_id[num_devices];
+
+	result = clGetContextInfo( context, CL_CONTEXT_DEVICES, size, device_list, NULL );
+
+	cmd_queue = clCreateCommandQueue( context, device_list[0], 0, NULL );
+
+	return 0;
+}
+
 int allocate(int n_points, int n_dimensions, int n_clusters, float **dimension)
 {
 
@@ -221,33 +249,6 @@ void cluster(float **dimensions, float ***cluster_centres)
 	*cluster_centres = tmp_cluster_centres;
 }
 
-static int initialize()
-{
-	cl_int result;
-	size_t size;
-
-	cl_platform_id platform_id;
-	if (clGetPlatformIDs(1, &platform_id, NULL) != CL_SUCCESS) { 
-		return -1; 
-	}
-	
-	cl_context_properties ctxprop[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platform_id, 0};
-
-	device_type = CL_DEVICE_TYPE_GPU;
-
-	context = clCreateContextFromType( ctxprop, device_type, NULL, NULL, NULL );
-	
-	result = clGetContextInfo( context, CL_CONTEXT_DEVICES, 0, NULL, &size );
-	num_devices = (int) (size / sizeof(cl_device_id));
-	
-	device_list = new cl_device_id[num_devices];
-
-	result = clGetContextInfo( context, CL_CONTEXT_DEVICES, size, device_list, NULL );
-
-	cmd_queue = clCreateCommandQueue( context, device_list[0], 0, NULL );
-
-	return 0;
-}
 
 
 
