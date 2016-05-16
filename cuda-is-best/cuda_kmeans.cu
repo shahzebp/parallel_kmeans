@@ -89,18 +89,8 @@ void compute_delta(int *deviceIntermediates, int numIntermediates, int numInterm
 }
 
 float** cuda_kmeans(float **objects, int numCoords, int numObjs, int numClusters, int *membership){
-    int     *newClusterSize; 
-    float    delta;
+
     float  **dimObjects;
-    float  **clusters;
-    float  **dimClusters;
-    float  **newClusters;
-
-    float *deviceObjects;
-    float *deviceClusters;
-    int *deviceMembership;
-    int *deviceIntermediates;
-
     malloc2D(dimObjects, numCoords, numObjs, float);
     for (int i = 0; i < numCoords; i++) {
         for (int j = 0; j < numObjs; j++) {
@@ -108,6 +98,8 @@ float** cuda_kmeans(float **objects, int numCoords, int numObjs, int numClusters
         }
     }
 
+    float *deviceClusters;
+    float  **dimClusters;
     malloc2D(dimClusters, numCoords, numClusters, float);
     for (int i = 0; i < numCoords; i++) {
         for (int j = 0; j < numClusters; j++) {
@@ -117,8 +109,10 @@ float** cuda_kmeans(float **objects, int numCoords, int numObjs, int numClusters
 
     memset(membership, -1, numObjs*sizeof(int));
 
+    int *newClusterSize; 
     newClusterSize = (int*) calloc(numClusters, sizeof(int));
 
+    float  **newClusters;
     malloc2D(newClusters, numCoords, numClusters, float);
     memset(newClusters[0], 0, numCoords * numClusters * sizeof(float));
 
@@ -133,6 +127,11 @@ float** cuda_kmeans(float **objects, int numCoords, int numObjs, int numClusters
         nextPowerOfTwo(numClusterBlocks);
     unsigned int reductionBlockSharedDataSize =
         numReductionThreads * sizeof(unsigned int);
+
+
+    float *deviceObjects;
+    int *deviceMembership;
+    int *deviceIntermediates;
 
     cudaMalloc(&deviceObjects, numObjs*numCoords*sizeof(float));
     cudaMalloc(&deviceClusters, numClusters*numCoords*sizeof(float));
@@ -159,12 +158,12 @@ float** cuda_kmeans(float **objects, int numCoords, int numObjs, int numClusters
 
         int d;
         cudaMemcpy(&d, deviceIntermediates, sizeof(int), cudaMemcpyDeviceToHost);
-        delta = (float)d;
+        float delta = (float)d;
 
         cudaMemcpy(membership, deviceMembership, numObjs*sizeof(int), cudaMemcpyDeviceToHost);
 
         for (int i=0; i<numObjs; i++) {
-            newClusterSize[membership[i]]++;
+            newClusterSize[membership[i]] += 1;
             for (int j=0; j<numCoords; j++)
                 newClusters[j][membership[i]] += objects[i][j];
         }
@@ -181,8 +180,9 @@ float** cuda_kmeans(float **objects, int numCoords, int numObjs, int numClusters
         if(delta > 0.001){
             break;
         }
-    }
+    }   
 
+    float  **clusters;
     malloc2D(clusters, numClusters, numCoords, float);
     for (int i = 0; i < numClusters; i++) {
         for (int j = 0; j < numCoords; j++) {
