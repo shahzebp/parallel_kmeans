@@ -78,6 +78,50 @@ int	k_means_CL(float **dimension, int n_dimensions, int n_points, int n_clusters
 	return conv_point;
 }
 
+int allocate(int n_points, int n_dimensions, int n_clusters, float **dimension)
+{
+
+	char * source = (char *)calloc(sourcesize, sizeof(char)); 
+	char * tempchar = "./kmeans.cl";
+	FILE * fp = fopen(tempchar, "rb"); 
+	fread(source + strlen(source), sourcesize, 1, fp);
+	fclose(fp);
+	
+	cl_int err = 0;	
+	if(initialize()) return -1;
+
+	const char * slist[2] = { source, 0 };
+	cl_program prog = clCreateProgramWithSource(context, 1, slist, NULL, &err);
+	clBuildProgram(prog, 0, NULL, NULL, NULL, NULL);
+
+	char * kernel_kmeans_c  = "kmeans_kernel_c";
+	char * kernel_swap  = "kmeans_swap";	
+		
+	kernel_s = clCreateKernel(prog, kernel_kmeans_c, &err);  
+	kernel2 = clCreateKernel(prog, kernel_swap, &err);  
+		
+	size_t global_work[3] = { n_points, 1, 1 };
+	relationship_OCL = (int*) malloc(n_points * sizeof(int));
+	
+    clReleaseProgram(prog);	
+	
+	d_dimension = clCreateBuffer(context, CL_MEM_READ_WRITE, n_points * n_dimensions * sizeof(float), NULL, &err );
+	clSetKernelArg(kernel2, 0, sizeof(void *), (void*) &d_dimension);
+	
+    d_dimension_swap = clCreateBuffer(context, CL_MEM_READ_WRITE, n_points * n_dimensions * sizeof(float), NULL, &err );
+	clSetKernelArg(kernel2, 1, sizeof(void *), (void*) &d_dimension_swap);
+	
+    cluster_dev = clCreateBuffer(context, CL_MEM_READ_WRITE, n_clusters * n_dimensions  * sizeof(float), NULL, &err );
+	
+    relationship_dev = clCreateBuffer(context, CL_MEM_READ_WRITE, n_points * sizeof(int), NULL, &err );
+	clSetKernelArg(kernel2, 2, sizeof(cl_int), (void*) &n_points);
+		
+	clEnqueueWriteBuffer(cmd_queue, d_dimension, 1, 0, n_points * n_dimensions * sizeof(float), dimension[0], 0, 0, 0);
+	clSetKernelArg(kernel2, 3, sizeof(cl_int), (void*) &n_dimensions);
+	
+    clEnqueueNDRangeKernel(cmd_queue, kernel2, 1, NULL, global_work, NULL, 0, 0, 0);	
+}
+
 float** k_means_cluster_op(float **dimension, int *relationship)
 {
     int i, j, n=0, loop=0, temp, *curr_dimensions_len, *initial, initial_points;
@@ -206,49 +250,6 @@ static int initialize()
 }
 
 
-int allocate(int n_points, int n_dimensions, int n_clusters, float **dimension)
-{
-
-	char * source = (char *)calloc(sourcesize, sizeof(char)); 
-	char * tempchar = "./kmeans.cl";
-	FILE * fp = fopen(tempchar, "rb"); 
-	fread(source + strlen(source), sourcesize, 1, fp);
-	fclose(fp);
-	
-	cl_int err = 0;	
-	if(initialize()) return -1;
-
-	const char * slist[2] = { source, 0 };
-	cl_program prog = clCreateProgramWithSource(context, 1, slist, NULL, &err);
-	clBuildProgram(prog, 0, NULL, NULL, NULL, NULL);
-
-	char * kernel_kmeans_c  = "kmeans_kernel_c";
-	char * kernel_swap  = "kmeans_swap";	
-		
-	kernel_s = clCreateKernel(prog, kernel_kmeans_c, &err);  
-	kernel2 = clCreateKernel(prog, kernel_swap, &err);  
-		
-	size_t global_work[3] = { n_points, 1, 1 };
-	relationship_OCL = (int*) malloc(n_points * sizeof(int));
-	
-    clReleaseProgram(prog);	
-	
-	d_dimension = clCreateBuffer(context, CL_MEM_READ_WRITE, n_points * n_dimensions * sizeof(float), NULL, &err );
-	clSetKernelArg(kernel2, 0, sizeof(void *), (void*) &d_dimension);
-	
-    d_dimension_swap = clCreateBuffer(context, CL_MEM_READ_WRITE, n_points * n_dimensions * sizeof(float), NULL, &err );
-	clSetKernelArg(kernel2, 1, sizeof(void *), (void*) &d_dimension_swap);
-	
-    cluster_dev = clCreateBuffer(context, CL_MEM_READ_WRITE, n_clusters * n_dimensions  * sizeof(float), NULL, &err );
-	
-    relationship_dev = clCreateBuffer(context, CL_MEM_READ_WRITE, n_points * sizeof(int), NULL, &err );
-	clSetKernelArg(kernel2, 2, sizeof(cl_int), (void*) &n_points);
-		
-	clEnqueueWriteBuffer(cmd_queue, d_dimension, 1, 0, n_points * n_dimensions * sizeof(float), dimension[0], 0, 0, 0);
-	clSetKernelArg(kernel2, 3, sizeof(cl_int), (void*) &n_dimensions);
-	
-    clEnqueueNDRangeKernel(cmd_queue, kernel2, 1, NULL, global_work, NULL, 0, 0, 0);	
-}
 
 int main( int argc, char** argv) 
 {
