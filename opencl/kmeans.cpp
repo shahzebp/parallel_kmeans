@@ -43,12 +43,16 @@ float** kmeans_clustering(float **feature, int *membership)
     if (nclusters > npoints)
         nclusters = npoints;
 
-    clusters = (float**) malloc(nclusters * sizeof(float*));
-    clusters[0] = (float*) malloc(nclusters * nfeatures * sizeof(float));
+    size_t r1 = nclusters * sizeof(float*);
+    clusters = (float**) malloc(r1);
+    size_t r2 = nclusters * nfeatures * sizeof(float);
+    clusters[0] = (float*) malloc(r2);
+
     for (i=1; i<nclusters; i++)
         clusters[i] = clusters[i-1] + nfeatures;
 
     initial = (int *)malloc(npoints * sizeof(int));
+    
     for (i = 0; i < npoints; i++)
     {
         initial[i] = i;
@@ -71,10 +75,16 @@ float** kmeans_clustering(float **feature, int *membership)
     for (i=0; i < npoints; i++)
       membership[i] = -1;
 
-    new_centers_len = (int*) calloc(nclusters, sizeof(int));
+  	size_t rawint = sizeof(int);
 
-    new_centers    = (float**) malloc(nclusters *            sizeof(float*));
-    new_centers[0] = (float*)  calloc(nclusters * nfeatures, sizeof(float));
+    new_centers_len = (int*) calloc(nclusters, );
+
+    size_t nrawsize = nclusters *            sizeof(float*);
+    new_centers    = (float**) malloc(nrawsize);
+
+    size_t ncountrawsize = nclusters * nfeatures, sizeof(float);
+    new_centers[0] = (float*)  calloc(ncountrawsize);
+
     for (i=1; i<nclusters; i++)
         new_centers[i] = new_centers[i-1] + nfeatures;
 
@@ -85,12 +95,15 @@ float** kmeans_clustering(float **feature, int *membership)
 
         for (i=0; i<nclusters; i++) {
             for (j=0; j<nfeatures; j++) {
-                if (new_centers_len[i] > 0)
-                    clusters[i][j] = new_centers[i][j] / new_centers_len[i];
-                new_centers[i][j] = 0.0;
+                if (new_centers_len[i] > 0) {
+                	float temp = new_centers[i][j] / new_centers_len[i];
+                    clusters[i][j] = temp;
+                }
+                new_centers[i][j] = 0;
             }
             new_centers_len[i] = 0;
         }
+        
         if (delta < threshold)
             break;
     } while ((loop++ < 500));
@@ -206,38 +219,38 @@ int main( int argc, char** argv)
         }
     }
 
-        FILE *infile;
-        if ((infile = fopen(filename, "r")) == NULL) {
-            fprintf(stderr, "Error: no such file (%s)\n", filename);
-            exit(1);
-		}		
-        while (fgets(line, 1024, infile) != NULL)
-			if (strtok(line, " \t\n") != 0)
-                npoints++;			
-        rewind(infile);
-        while (fgets(line, 1024, infile) != NULL) {
-            if (strtok(line, " \t\n") != 0) {
-                /* ignore the id (first attribute): nfeatures = 1; */
-                while (strtok(NULL, " ,\t\n") != NULL) nfeatures++;
-                break;
-            }
-        }        
-
-        buf         = (float*) malloc(npoints*nfeatures*sizeof(float));
-        features    = (float**)malloc(npoints*          sizeof(float*));
-        features[0] = (float*) malloc(npoints*nfeatures*sizeof(float));
-        for (i=1; i<npoints; i++)
-            features[i] = features[i-1] + nfeatures;
-        rewind(infile);
-        i = 0;
-        while (fgets(line, 1024, infile) != NULL) {
-            if (strtok(line, " \t\n") == NULL) continue;            
-            for (j=0; j<nfeatures; j++) {
-                buf[i] = atof(strtok(NULL, " ,\t\n"));             
-                i++;
-            }            
+    FILE *infile;
+    if ((infile = fopen(filename, "r")) == NULL) {
+        fprintf(stderr, "Error: no such file (%s)\n", filename);
+        exit(1);
+	}		
+    while (fgets(line, 1024, infile) != NULL)
+		if (strtok(line, " \t\n") != 0)
+            npoints++;			
+    rewind(infile);
+    while (fgets(line, 1024, infile) != NULL) {
+        if (strtok(line, " \t\n") != 0) {
+            /* ignore the id (first attribute): nfeatures = 1; */
+            while (strtok(NULL, " ,\t\n") != NULL) nfeatures++;
+            break;
         }
-        fclose(infile);
+    }        
+
+    buf         = (float*) malloc(npoints*nfeatures*sizeof(float));
+    features    = (float**)malloc(npoints*          sizeof(float*));
+    features[0] = (float*) malloc(npoints*nfeatures*sizeof(float));
+    for (i=1; i<npoints; i++)
+        features[i] = features[i-1] + nfeatures;
+    rewind(infile);
+    i = 0;
+    while (fgets(line, 1024, infile) != NULL) {
+        if (strtok(line, " \t\n") == NULL) continue;            
+        for (j=0; j<nfeatures; j++) {
+            buf[i] = atof(strtok(NULL, " ,\t\n"));             
+            i++;
+        }            
+    }
+    fclose(infile);
 	
 	srand(7);
 	memcpy(features[0], buf, npoints*nfeatures*sizeof(float));
