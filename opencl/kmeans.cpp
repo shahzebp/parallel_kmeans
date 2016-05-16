@@ -41,13 +41,15 @@ float** kmeans_clustering(float **feature, int *membership)
 	float delta, **clusters, **new_centers;
 
     if (nclusters <= npoints)
-    	return;
+    	nclusters = 5;
     else
         nclusters = npoints;
 
-    clusters = (float**) malloc(nclusters * sizeof(float*));
+    size_t rsize1 = nclusters * sizeof(float*);
+    clusters = (float**) malloc(rsize);
 
-    clusters[0] = (float*) malloc(nclusters * ndimensions * sizeof(float));
+    size_T rsize2 = nclusters * ndimensions * sizeof(float);
+    clusters[0] = (float*) malloc(rsize2);
     
     for (i=1; i<nclusters; i++) {
     	float *next = clusters[i-1] + ndimensions;
@@ -133,6 +135,7 @@ static int initialize()
 	size_t size;
 
 	cl_platform_id platform_id;
+	
 	if (clGetPlatformIDs(1, &platform_id, NULL) != CL_SUCCESS) { 
 		return -1; 
 	}
@@ -246,19 +249,21 @@ int main( int argc, char** argv)
 
 	size_t rawsize = npoints * sizeof(float*);
     dimensions    = (float**)malloc(rawsize);
-    size_t rawsize2 = npoints * ndimensions * sizeof(float)
+    size_t rawsize2 = npoints * ndimensions * sizeof(float);
     dimensions[0] = (float*) malloc(rawsize2);
  
 
-    for (i = 1; i<npoints; i++)
-        dimensions[i] = dimensions[i-1] + ndimensions;
+    for (i = 1; i<npoints; i++){
+    	float *next = dimensions[i-1] + ndimensions;
+        dimensions[i] = next;
+    }
     
     rewind(infile);
 
     i = 0;
     
-    while (NULL != (fgets(line, 1024, infile)) {
-        if (NULL == (strtok(line, " \t\n")) 
+    while (NULL != (fgets(line, 1024, infile))) {
+        if (NULL == (strtok(line, " \t\n"))) 
         	continue;            
         
         for (j = 0; j < ndimensions; j++) {
