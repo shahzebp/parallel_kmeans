@@ -33,8 +33,6 @@ void find_nearest_cluster(int numCoords, int numObjs, int numClusters, float *ob
 
     unsigned char *membershipChanged = (unsigned char *)sharedMemory;
 
-    float *clusters = deviceClusters;
-
     membershipChanged[threadIdx.x] = 0;
 
     int objectId =  threadIdx.x + (blockDim.x * blockIdx.x);
@@ -43,7 +41,7 @@ void find_nearest_cluster(int numCoords, int numObjs, int numClusters, float *ob
         float min_dist;
         int index  = -1;
         min_dist = FLT_MAX;
-
+        float *clusters = deviceClusters;
         for (int i=0; i<numClusters; i++) {
             float dist = euclid_dist_2(numCoords, numObjs, numClusters,
                                  objects, clusters, objectId, i);
@@ -56,13 +54,14 @@ void find_nearest_cluster(int numCoords, int numObjs, int numClusters, float *ob
         }
 
         __syncthreads();
-
-        for (unsigned int s = blockDim.x / 2; s > 0; s /= 2) {
+        unsigned int s = blockDim.x / 2;
+        while(s > 0) {
             membershipChanged[threadIdx.x] += ((threadIdx.x < s) ? membershipChanged[threadIdx.x + s] : 0);
+            s >>= 1;
             __syncthreads();
         }
          
-        if (threadIdx.x == 0) {
+        if (!(threadIdx.x)) {
             intermediates[blockIdx.x] = membershipChanged[0];
         }
     }
@@ -70,16 +69,19 @@ void find_nearest_cluster(int numCoords, int numObjs, int numClusters, float *ob
 
 __global__ static
 void compute_delta(int *deviceIntermediates, int numIntermediates, int numIntermediates2){
-
+    
+    numIntermediates2 >>= 1;
     extern __shared__ unsigned int intermediates[];
 
     intermediates[threadIdx.x] =
-        (threadIdx.x < numIntermediates) ? deviceIntermediates[threadIdx.x] : 0;
+        ((threadIdx.x >= numIntermediates) ? 0 : deviceIntermediates[threadIdx.x]);
 
     __syncthreads();
-
-    for (unsigned int s = numIntermediates2 / 2; s > 0; s >>= 1) {
+    
+    unsigned int s =  numIntermediates2;
+    while(s > 0) {
         intermediates[threadIdx.x] += ((threadIdx.x < s) ? intermediates[threadIdx.x + s] : 0);
+        s >>= 1;
         __syncthreads();
     }
 
