@@ -78,7 +78,7 @@ int	k_means_CL(float **dimension, int n_dimensions, int n_points, int n_clusters
 	return conv_point;
 }
 
-static int initialize()
+static int cluster_init()
 {
 	cl_int result;
 	size_t size;
@@ -106,7 +106,7 @@ static int initialize()
 	return 0;
 }
 
-int allocate(int n_points, int n_dimensions, int n_clusters, float **dimension)
+int cluster_alloc(int n_points, int n_dimensions, int n_clusters, float **dimension)
 {
 
 	char * source = (char *)calloc(sourcesize, sizeof(char)); 
@@ -116,7 +116,7 @@ int allocate(int n_points, int n_dimensions, int n_clusters, float **dimension)
 	fclose(fp);
 	
 	cl_int err = 0;	
-	if(initialize()) return -1;
+	if(cluster_init()) return -1;
 
 	const char * slist[2] = { source, 0 };
 	cl_program prog = clCreateProgramWithSource(context, 1, slist, NULL, &err);
@@ -243,14 +243,11 @@ void cluster(float **dimensions, float ***cluster_centres)
 	if (nclusters > npoints)
 		return;
 
-	allocate(npoints, ndimensions, nclusters, dimensions);
+	cluster_alloc(npoints, ndimensions, nclusters, dimensions);
 
 	tmp_cluster_centres = k_means_cluster_op(dimensions, relationship);
 	*cluster_centres = tmp_cluster_centres;
 }
-
-
-
 
 int main( int argc, char** argv) 
 {
