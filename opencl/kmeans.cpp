@@ -67,12 +67,14 @@ float** kmeans_clustering(float **feature, int *membership)
 
         initial[n] = initial[initial_points];
         initial[initial_points] = temp;
-        
+
         n = n + 1;
     }
 
-    for (i=0; i < npoints; i++)
-      membership[i] = -1;
+    //for (i=0; i < npoints; i++)
+    //  membership[i] = -1;
+
+  	memset(membership, -1, npoints * sizeof(int));
 
   	size_t rawint = sizeof(int);
 
