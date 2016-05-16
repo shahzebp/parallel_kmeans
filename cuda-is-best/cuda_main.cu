@@ -1,9 +1,125 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
-#include <float.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/time.h>
 
-#include "kmeans.h"
+#define MAX_CHAR_PER_LINE 128
+#include <assert.h>
+#define FLT_MAX 3.40282347e+38
+
+#define msg(format, ...) do { fprintf(stderr, format, ##__VA_ARGS__); } while (0)
+#define err(format, ...) do { fprintf(stderr, format, ##__VA_ARGS__); exit(1); } while (0)
+
+#define malloc2D(name, xDim, yDim, type) do {               \
+    name = (type **)malloc(xDim * sizeof(type *));          \
+    assert(name != NULL);                                   \
+    name[0] = (type *)malloc(xDim * yDim * sizeof(type));   \
+    assert(name[0] != NULL);                                \
+    for (size_t i = 1; i < xDim; i++)                       \
+        name[i] = name[i-1] + yDim;                         \
+} while (0)
+
+#ifdef __CUDACC__
+inline void checkCuda(cudaError_t e) {
+    if (e != cudaSuccess) {
+        // cudaGetErrorString() isn't always very helpful. Look up the error
+        // number in the cudaError enum in driver_types.h in the CUDA includes
+        // directory for a better explanation.
+        err("CUDA Error %d: %s\n", e, cudaGetErrorString(e));
+    }
+}
+
+inline void checkLastCudaError() {
+    checkCuda(cudaGetLastError());
+}
+#endif
+
+float** cuda_kmeans(float**, int, int, int, int*);
+
+double  wtime(void);
+
+float** file_read(int   isBinaryFile,  /* flag: 0 or 1 */
+                  char *filename,      /* input file name */
+                  int  *numObjs,       /* no. data objects (local) */
+                  int  *numCoords)     /* no. coordinates */
+{
+    float **objects;
+    int     i, j, len;
+    ssize_t numBytesRead;
+
+    FILE *infile;
+    char *line, *ret;
+    int   lineLen;
+
+    if ((infile = fopen(filename, "r")) == NULL) {
+        fprintf(stderr, "Error: no such file (%s)\n", filename);
+        return NULL;
+    }
+
+    /* first find the number of objects */
+    lineLen = MAX_CHAR_PER_LINE;
+    line = (char*) malloc(lineLen);
+    assert(line != NULL);
+
+    (*numObjs) = 0;
+    while (fgets(line, lineLen, infile) != NULL) {
+        /* check each line to find the max line length */
+        while (strlen(line) == lineLen-1) {
+            /* this line read is not complete */
+            len = strlen(line);
+            fseek(infile, -len, SEEK_CUR);
+
+            /* increase lineLen */
+            lineLen += MAX_CHAR_PER_LINE;
+            line = (char*) realloc(line, lineLen);
+            assert(line != NULL);
+
+            ret = fgets(line, lineLen, infile);
+            assert(ret != NULL);
+        }
+
+        if (strtok(line, " \t\n") != 0)
+            (*numObjs)++;
+    }
+    rewind(infile);
+
+    /* find the no. objects of each object */
+    (*numCoords) = 0;
+    while (fgets(line, lineLen, infile) != NULL) {
+        if (strtok(line, " \t\n") != 0) {
+            /* ignore the id (first coordiinate): numCoords = 1; */
+            while (strtok(NULL, " ,\t\n") != NULL) (*numCoords)++;
+            break; /* this makes read from 1st object */
+        }
+    }
+    rewind(infile);
+    /* allocate space for objects[][] and read all objects */
+    len = (*numObjs) * (*numCoords);
+    objects    = (float**)malloc((*numObjs) * sizeof(float*));
+    assert(objects != NULL);
+    objects[0] = (float*) malloc(len * sizeof(float));
+    assert(objects[0] != NULL);
+    for (i=1; i<(*numObjs); i++)
+        objects[i] = objects[i-1] + (*numCoords);
+
+    i = 0;
+    /* read all objects */
+    while (fgets(line, lineLen, infile) != NULL) {
+        if (strtok(line, " \t\n") == NULL) continue;
+        for (j=0; j<(*numCoords); j++)
+            objects[i][j] = atof(strtok(NULL, " ,\t\n"));
+        i++;
+    }
+
+    fclose(infile);
+    free(line);
+
+    return objects;
+}
 
 static int nextPowerOfTwo(int n) {
     int res = 0;
@@ -89,6 +205,32 @@ void compute_delta(int *deviceIntermediates, int numIntermediates, int numInterm
         deviceIntermediates[0] = intermediates[0];
     }
 }
+
+
+double wtime(void) 
+{
+    double          now_time;
+    struct timeval  etstart;
+    struct timezone tzp;
+
+    if (gettimeofday(&etstart, &tzp) == -1)
+        perror("Error: calling gettimeofday() not successful.\n");
+
+    now_time = ((double)etstart.tv_sec) +              /* in seconds */
+               ((double)etstart.tv_usec) / 1000000.0;  /* in microseconds */
+    return now_time;
+}
+
+#ifdef _TESTING_
+int main(int argc, char **argv) {
+    double time;
+
+    time = wtime();
+    printf("time of day = %10.4f\n", time);
+
+    return 0;
+}
+#endif
 
 float** cuda_kmeans(float **objects, int numCoords, int numObjs, int numClusters, int *membership){
 
@@ -193,5 +335,69 @@ float** cuda_kmeans(float **objects, int numCoords, int numObjs, int numClusters
     }
 
     return clusters;
+}
+
+int main(int argc, char **argv) {
+           int     opt;
+    extern char   *optarg;
+    extern int     optind;
+           int     isBinaryFile, is_output_timing;
+
+           int     numClusters, numCoords, numObjs;
+           int    *membership;
+           char   *filename;
+           float **objects;
+           float **clusters;
+           float   threshold;
+           double  timing, io_timing, clustering_timing;
+           int     loop_iterations;
+
+    threshold        = 0.001;
+    numClusters      = 0;
+    filename         = NULL;
+
+    while ( (opt=getopt(argc,argv,"p:i:n:t:abdo"))!= EOF) {
+        switch (opt) {
+            case 'i': filename=optarg;
+                      break;
+            case 'n': numClusters = atoi(optarg);
+                  break;
+            case '?': 
+                      break;
+            default: 
+                      break;
+        }
+    }
+
+    objects = file_read(isBinaryFile, filename, &numObjs, &numCoords);
+    if (objects == NULL) exit(1);
+
+    if (is_output_timing) {
+        timing            = wtime();
+        io_timing         = timing - io_timing;
+        clustering_timing = timing;
+    }
+
+    membership = (int*) malloc(numObjs * sizeof(int));
+    assert(membership != NULL);
+
+    clusters = cuda_kmeans(objects, numCoords, numObjs, numClusters,
+                          membership);
+
+    free(objects[0]);
+    free(objects);
+
+    if (is_output_timing) {
+        timing            = wtime();
+        clustering_timing = timing - clustering_timing;
+    }
+
+    printf("numObjs       = %d\n", numObjs);
+    printf("numCoords     = %d\n", numCoords);
+    printf("numClusters   = %d\n", numClusters);
+
+    printf("Computation timing = %10.4f sec\n", clustering_timing);
+
+    return(0);
 }
 
