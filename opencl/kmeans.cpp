@@ -77,13 +77,14 @@ float** kmeans_clustering(float **feature, int *membership)
 
   	size_t rawint = sizeof(int);
 
-    new_centers_len = (int*) calloc(nclusters, );
+    new_centers_len = (int*) calloc(nclusters, rawint);
 
     size_t nrawsize = nclusters *            sizeof(float*);
     new_centers    = (float**) malloc(nrawsize);
 
-    size_t ncountrawsize = nclusters * nfeatures, sizeof(float);
-    new_centers[0] = (float*)  calloc(ncountrawsize);
+    size_t ncountrawsize = sizeof(float);
+
+    new_centers[0] = (float*)  calloc(nclusters * nfeatures, ncountrawsize);
 
     for (i=1; i<nclusters; i++)
         new_centers[i] = new_centers[i-1] + nfeatures;
@@ -103,7 +104,7 @@ float** kmeans_clustering(float **feature, int *membership)
             }
             new_centers_len[i] = 0;
         }
-        
+
         if (delta < threshold)
             break;
     } while ((loop++ < 500));
