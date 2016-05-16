@@ -52,24 +52,23 @@ float** kmeans_clustering(float **feature, int *membership)
         clusters[i] = clusters[i-1] + nfeatures;
 
     initial = (int *)malloc(npoints * sizeof(int));
-    
-    for (i = 0; i < npoints; i++)
-    {
-        initial[i] = i;
-    }
-
     initial_points = npoints;
+
+    for (i = 0; i < npoints; i++)
+        initial[i] = i;
 
     for (i=0; i<nclusters && initial_points >= 0; i++) {
 
         for (j=0; j<nfeatures; j++)
             clusters[i][j] = feature[initial[n]][j];
 
-        temp = initial[n];
-        initial[n] = initial[initial_points-1];
-        initial[initial_points-1] = temp;
+        int temp = initial[n];
         initial_points--;
-        n++;
+
+        initial[n] = initial[initial_points];
+        initial[initial_points] = temp;
+        
+        n = n + 1;
     }
 
     for (i=0; i < npoints; i++)
