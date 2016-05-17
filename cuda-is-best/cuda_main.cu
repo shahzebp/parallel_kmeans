@@ -17,10 +17,7 @@
         name[i] = name[i-1] + yDim;                         \
 } while (0)
 
-float** file_read(
-                  char *filename,
-                  int  *numObjs,       /* no. data objects (local) */
-                  int  *numCoords)     /* no. coordinates */
+float** file_read(char *filename, int  *numObjs, int  *numCoords)
 {
     float **objects;
     int     i, j, len;
@@ -35,19 +32,15 @@ float** file_read(
         return NULL;
     }
 
-    /* first find the number of objects */
     lineLen = MAX_CHAR_PER_LINE;
     line = (char*) malloc(lineLen);
 
     (*numObjs) = 0;
     while (fgets(line, lineLen, infile) != NULL) {
-        /* check each line to find the max line length */
         while (strlen(line) == lineLen-1) {
-            /* this line read is not complete */
             len = strlen(line);
             fseek(infile, -len, SEEK_CUR);
 
-            /* increase lineLen */
             lineLen += MAX_CHAR_PER_LINE;
             line = (char*) realloc(line, lineLen);
 
@@ -59,17 +52,14 @@ float** file_read(
     }
     rewind(infile);
 
-    /* find the no. objects of each object */
     (*numCoords) = 0;
     while (fgets(line, lineLen, infile) != NULL) {
         if (strtok(line, " \t\n") != 0) {
-            /* ignore the id (first coordiinate): numCoords = 1; */
             while (strtok(NULL, " ,\t\n") != NULL) (*numCoords)++;
-            break; /* this makes read from 1st object */
+            break;
         }
     }
     rewind(infile);
-    /* allocate space for objects[][] and read all objects */
     len = (*numObjs) * (*numCoords);
     objects    = (float**)malloc((*numObjs) * sizeof(float*));
     objects[0] = (float*) malloc(len * sizeof(float));
@@ -77,7 +67,6 @@ float** file_read(
         objects[i] = objects[i-1] + (*numCoords);
 
     i = 0;
-    /* read all objects */
     while (fgets(line, lineLen, infile) != NULL) {
         if (strtok(line, " \t\n") == NULL) continue;
         for (j=0; j<(*numCoords); j++)
@@ -304,17 +293,24 @@ int main(int argc, char **argv) {
                       break;
         }
     }
+    struct timeval tvalBefore, tvalAfter;
 
     objects = file_read(filename, &numObjs, &numCoords);
     membership = (int*) malloc(numObjs * sizeof(int));
+    gettimeofday (&tvalBefore, NULL);
 
     clusters = cuda_kmeans(objects, numCoords, numObjs, numClusters,
                           membership);
+    gettimeofday (&tvalAfter, NULL);
 
     printf("numObjs       = %d\n", numObjs);
     printf("numCoords     = %d\n", numCoords);
     printf("numClusters   = %d\n", numClusters);
 
+    printf("Time: %ld microseconds\n",
+        ((tvalAfter.tv_sec - tvalBefore.tv_sec)*1000000L
+        +tvalAfter.tv_usec) - tvalBefore.tv_usec
+        );
+
     return(0);
 }
-
