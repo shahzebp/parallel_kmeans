@@ -271,17 +271,17 @@ float** cuda_kmeans(float **objects, int num_coordinates, int num_objs, int num_
 }
 
 int main(int argc, char **argv) {
-   int     opt;
+    int     opt;
 
-   int     num_clusters, num_coordinates, num_objs;
-   int    *relationship;
-   char   *filename;
-   float **objects;
-   float **clusters;
+    int     num_clusters, num_coordinates, num_objs;
+    int    *relationship;
+    char   *filename;
+    float **objects;
+    float **clusters;
     num_clusters      = 0;
     filename         = NULL;
 
-    while ( (opt=getopt(argc,argv,"p:i:n:t:abdo"))!= EOF) {
+    while ( (opt=getopt(argc,argv,"i:n:"))!= EOF) {
         switch (opt) {
             case 'i': filename=optarg;
                       break;
