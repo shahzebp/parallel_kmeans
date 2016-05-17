@@ -10,20 +10,17 @@
 #define MAX_CHAR_PER_LINE 128
 #define FLT_MAX 3.40282347e+38
 
-#define msg(format, ...) do { fprintf(stderr, format, ##__VA_ARGS__); } while (0)
-#define err(format, ...) do { fprintf(stderr, format, ##__VA_ARGS__); exit(1); } while (0)
-
-#define malloc2D(name, xDim, yDim, type) do {
-    name = (type **)malloc(xDim * sizeof(type *));
-    name[0] = (type *)malloc(xDim * yDim * sizeof(type));
-    for (size_t i = 1; i < xDim; i++)
-        name[i] = name[i-1] + yDim;
+#define malloc2D(name, xDim, yDim, type) do {               \
+    name = (type **)malloc(xDim * sizeof(type *));          \
+    name[0] = (type *)malloc(xDim * yDim * sizeof(type));   \
+    for (size_t i = 1; i < xDim; i++)                       \
+        name[i] = name[i-1] + yDim;                         \
 } while (0)
 
-float** file_read(int   isBinaryFile,
+float** file_read(
                   char *filename,
-                  int  *numObjs,
-                  int  *numCoords)
+                  int  *numObjs,       /* no. data objects (local) */
+                  int  *numCoords)     /* no. coordinates */
 {
     float **objects;
     int     i, j, len;
@@ -62,6 +59,7 @@ float** file_read(int   isBinaryFile,
     }
     rewind(infile);
 
+    /* find the no. objects of each object */
     (*numCoords) = 0;
     while (fgets(line, lineLen, infile) != NULL) {
         if (strtok(line, " \t\n") != 0) {
@@ -71,7 +69,7 @@ float** file_read(int   isBinaryFile,
         }
     }
     rewind(infile);
-
+    /* allocate space for objects[][] and read all objects */
     len = (*numObjs) * (*numCoords);
     objects    = (float**)malloc((*numObjs) * sizeof(float*));
     objects[0] = (float*) malloc(len * sizeof(float));
@@ -79,7 +77,7 @@ float** file_read(int   isBinaryFile,
         objects[i] = objects[i-1] + (*numCoords);
 
     i = 0;
-
+    /* read all objects */
     while (fgets(line, lineLen, infile) != NULL) {
         if (strtok(line, " \t\n") == NULL) continue;
         for (j=0; j<(*numCoords); j++)
@@ -291,9 +289,6 @@ int main(int argc, char **argv) {
            char   *filename;
            float **objects;
            float **clusters;
-           float   threshold;
-           
-    threshold        = 0.001;
     numClusters      = 0;
     filename         = NULL;
 
@@ -309,27 +304,16 @@ int main(int argc, char **argv) {
                       break;
         }
     }
-    struct timeval tvalBefore, tvalAfter;
 
-    objects = file_read(isBinaryFile, filename, &numObjs, &numCoords);
-
+    objects = file_read(filename, &numObjs, &numCoords);
     membership = (int*) malloc(numObjs * sizeof(int));
-    gettimeofday (&tvalBefore, NULL);
 
     clusters = cuda_kmeans(objects, numCoords, numObjs, numClusters,
                           membership);
 
-    gettimeofday (&tvalAfter, NULL);
-
-
     printf("numObjs       = %d\n", numObjs);
     printf("numCoords     = %d\n", numCoords);
     printf("numClusters   = %d\n", numClusters);
-
-    printf("Time: %ld microseconds\n",
-        ((tvalAfter.tv_sec - tvalBefore.tv_sec)*1000000L
-        +tvalAfter.tv_usec) - tvalBefore.tv_usec
-        );
 
     return(0);
 }

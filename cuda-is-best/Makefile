@@ -5,7 +5,7 @@ OPTFLAGS    = -O -NDEBUG
 OPTFLAGS    = -g -pg
 INCFLAGS    = -I.
 CFLAGS      = $(OPTFLAGS) $(DFLAGS) $(INCFLAGS) -DBLOCK_SHARED_MEM_OPTIMIZATION=1
-NVCCFLAGS   = $(CFLAGS) --ptxas-options=-v
+NVCCFLAGS   = $(CFLAGS)
 LDFLAGS     = $(OPTFLAGS)
 LIBS        =
 
@@ -26,6 +26,5 @@ cuda: cuda_main
 cuda_main: $(CUDA_C_OBJ)
 	$(NVCC) $(LDFLAGS) -o $@ $(CUDA_C_OBJ)
 
-#---------------------------------------------------------------------
 clean:
 	rm -rf *.o cuda_main
