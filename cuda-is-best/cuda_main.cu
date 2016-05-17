@@ -8,44 +8,22 @@
 #include <sys/time.h>
 
 #define MAX_CHAR_PER_LINE 128
-#include <assert.h>
 #define FLT_MAX 3.40282347e+38
 
 #define msg(format, ...) do { fprintf(stderr, format, ##__VA_ARGS__); } while (0)
 #define err(format, ...) do { fprintf(stderr, format, ##__VA_ARGS__); exit(1); } while (0)
 
-#define malloc2D(name, xDim, yDim, type) do {               \
-    name = (type **)malloc(xDim * sizeof(type *));          \
-    assert(name != NULL);                                   \
-    name[0] = (type *)malloc(xDim * yDim * sizeof(type));   \
-    assert(name[0] != NULL);                                \
-    for (size_t i = 1; i < xDim; i++)                       \
-        name[i] = name[i-1] + yDim;                         \
+#define malloc2D(name, xDim, yDim, type) do {
+    name = (type **)malloc(xDim * sizeof(type *));
+    name[0] = (type *)malloc(xDim * yDim * sizeof(type));
+    for (size_t i = 1; i < xDim; i++)
+        name[i] = name[i-1] + yDim;
 } while (0)
 
-#ifdef __CUDACC__
-inline void checkCuda(cudaError_t e) {
-    if (e != cudaSuccess) {
-        // cudaGetErrorString() isn't always very helpful. Look up the error
-        // number in the cudaError enum in driver_types.h in the CUDA includes
-        // directory for a better explanation.
-        err("CUDA Error %d: %s\n", e, cudaGetErrorString(e));
-    }
-}
-
-inline void checkLastCudaError() {
-    checkCuda(cudaGetLastError());
-}
-#endif
-
-float** cuda_kmeans(float**, int, int, int, int*);
-
-double  wtime(void);
-
-float** file_read(int   isBinaryFile,  /* flag: 0 or 1 */
-                  char *filename,      /* input file name */
-                  int  *numObjs,       /* no. data objects (local) */
-                  int  *numCoords)     /* no. coordinates */
+float** file_read(int   isBinaryFile,
+                  char *filename,
+                  int  *numObjs,
+                  int  *numCoords)
 {
     float **objects;
     int     i, j, len;
@@ -63,7 +41,6 @@ float** file_read(int   isBinaryFile,  /* flag: 0 or 1 */
     /* first find the number of objects */
     lineLen = MAX_CHAR_PER_LINE;
     line = (char*) malloc(lineLen);
-    assert(line != NULL);
 
     (*numObjs) = 0;
     while (fgets(line, lineLen, infile) != NULL) {
@@ -76,10 +53,8 @@ float** file_read(int   isBinaryFile,  /* flag: 0 or 1 */
             /* increase lineLen */
             lineLen += MAX_CHAR_PER_LINE;
             line = (char*) realloc(line, lineLen);
-            assert(line != NULL);
 
             ret = fgets(line, lineLen, infile);
-            assert(ret != NULL);
         }
 
         if (strtok(line, " \t\n") != 0)
@@ -87,7 +62,6 @@ float** file_read(int   isBinaryFile,  /* flag: 0 or 1 */
     }
     rewind(infile);
 
-    /* find the no. objects of each object */
     (*numCoords) = 0;
     while (fgets(line, lineLen, infile) != NULL) {
         if (strtok(line, " \t\n") != 0) {
@@ -97,17 +71,15 @@ float** file_read(int   isBinaryFile,  /* flag: 0 or 1 */
         }
     }
     rewind(infile);
-    /* allocate space for objects[][] and read all objects */
+
     len = (*numObjs) * (*numCoords);
     objects    = (float**)malloc((*numObjs) * sizeof(float*));
-    assert(objects != NULL);
     objects[0] = (float*) malloc(len * sizeof(float));
-    assert(objects[0] != NULL);
     for (i=1; i<(*numObjs); i++)
         objects[i] = objects[i-1] + (*numCoords);
 
     i = 0;
-    /* read all objects */
+
     while (fgets(line, lineLen, infile) != NULL) {
         if (strtok(line, " \t\n") == NULL) continue;
         for (j=0; j<(*numCoords); j++)
@@ -205,32 +177,6 @@ void compute_delta(int *deviceIntermediates, int numIntermediates, int numInterm
         deviceIntermediates[0] = intermediates[0];
     }
 }
-
-
-double wtime(void) 
-{
-    double          now_time;
-    struct timeval  etstart;
-    struct timezone tzp;
-
-    if (gettimeofday(&etstart, &tzp) == -1)
-        perror("Error: calling gettimeofday() not successful.\n");
-
-    now_time = ((double)etstart.tv_sec) +              /* in seconds */
-               ((double)etstart.tv_usec) / 1000000.0;  /* in microseconds */
-    return now_time;
-}
-
-#ifdef _TESTING_
-int main(int argc, char **argv) {
-    double time;
-
-    time = wtime();
-    printf("time of day = %10.4f\n", time);
-
-    return 0;
-}
-#endif
 
 float** cuda_kmeans(float **objects, int numCoords, int numObjs, int numClusters, int *membership){
 
@@ -339,9 +285,6 @@ float** cuda_kmeans(float **objects, int numCoords, int numObjs, int numClusters
 
 int main(int argc, char **argv) {
            int     opt;
-    extern char   *optarg;
-    extern int     optind;
-           int     isBinaryFile, is_output_timing;
 
            int     numClusters, numCoords, numObjs;
            int    *membership;
@@ -349,9 +292,7 @@ int main(int argc, char **argv) {
            float **objects;
            float **clusters;
            float   threshold;
-           double  timing, io_timing, clustering_timing;
-           int     loop_iterations;
-
+           
     threshold        = 0.001;
     numClusters      = 0;
     filename         = NULL;
@@ -368,35 +309,27 @@ int main(int argc, char **argv) {
                       break;
         }
     }
+    struct timeval tvalBefore, tvalAfter;
 
     objects = file_read(isBinaryFile, filename, &numObjs, &numCoords);
-    if (objects == NULL) exit(1);
-
-    if (is_output_timing) {
-        timing            = wtime();
-        io_timing         = timing - io_timing;
-        clustering_timing = timing;
-    }
 
     membership = (int*) malloc(numObjs * sizeof(int));
-    assert(membership != NULL);
+    gettimeofday (&tvalBefore, NULL);
 
     clusters = cuda_kmeans(objects, numCoords, numObjs, numClusters,
                           membership);
 
-    free(objects[0]);
-    free(objects);
+    gettimeofday (&tvalAfter, NULL);
 
-    if (is_output_timing) {
-        timing            = wtime();
-        clustering_timing = timing - clustering_timing;
-    }
 
     printf("numObjs       = %d\n", numObjs);
     printf("numCoords     = %d\n", numCoords);
     printf("numClusters   = %d\n", numClusters);
 
-    printf("Computation timing = %10.4f sec\n", clustering_timing);
+    printf("Time: %ld microseconds\n",
+        ((tvalAfter.tv_sec - tvalBefore.tv_sec)*1000000L
+        +tvalAfter.tv_usec) - tvalBefore.tv_usec
+        );
 
     return(0);
 }
