@@ -17,7 +17,7 @@
         name[i] = name[i-1] + yDim;                         \
 } while (0)
 
-float** file_read(char *filename, int  *numObjs, int  *numCoords)
+float** file_read(char *filename, int  *num_objs, int  *num_coordinates)
 {
     float **objects;
     int     i, j, len;
@@ -35,7 +35,7 @@ float** file_read(char *filename, int  *numObjs, int  *numCoords)
     lineLen = MAX_CHAR_PER_LINE;
     line = (char*) malloc(lineLen);
 
-    (*numObjs) = 0;
+    (*num_objs) = 0;
     while (fgets(line, lineLen, infile) != NULL) {
         while (strlen(line) == lineLen-1) {
             len = strlen(line);
@@ -48,28 +48,28 @@ float** file_read(char *filename, int  *numObjs, int  *numCoords)
         }
 
         if (strtok(line, " \t\n") != 0)
-            (*numObjs)++;
+            (*num_objs)++;
     }
     rewind(infile);
 
-    (*numCoords) = 0;
+    (*num_coordinates) = 0;
     while (fgets(line, lineLen, infile) != NULL) {
         if (strtok(line, " \t\n") != 0) {
-            while (strtok(NULL, " ,\t\n") != NULL) (*numCoords)++;
+            while (strtok(NULL, " ,\t\n") != NULL) (*num_coordinates)++;
             break;
         }
     }
     rewind(infile);
-    len = (*numObjs) * (*numCoords);
-    objects    = (float**)malloc((*numObjs) * sizeof(float*));
+    len = (*num_objs) * (*num_coordinates);
+    objects    = (float**)malloc((*num_objs) * sizeof(float*));
     objects[0] = (float*) malloc(len * sizeof(float));
-    for (i=1; i<(*numObjs); i++)
-        objects[i] = objects[i-1] + (*numCoords);
+    for (i=1; i<(*num_objs); i++)
+        objects[i] = objects[i-1] + (*num_coordinates);
 
     i = 0;
     while (fgets(line, lineLen, infile) != NULL) {
         if (strtok(line, " \t\n") == NULL) continue;
-        for (j=0; j<(*numCoords); j++)
+        for (j=0; j<(*num_coordinates); j++)
             objects[i][j] = atof(strtok(NULL, " ,\t\n"));
         i++;
     }
@@ -80,7 +80,7 @@ float** file_read(char *filename, int  *numObjs, int  *numCoords)
     return objects;
 }
 
-static int nextPowerOfTwo(int n) {
+static int cal_pow_2(int n) {
     int res = 0;
     while(n > 0){
         n >>= 1;
@@ -90,11 +90,11 @@ static int nextPowerOfTwo(int n) {
 }
 
 __host__ __device__ static
-float euclid_dist_2(int numCoords, int numObjs, int numClusters, float *objects, float *clusters, int objectId, int clusterId){
+float cal_dist(int num_coordinates, int num_objs, int num_clusters, float *objects, float *clusters, int objectId, int clusterId){
     float ans=0.0;
 
-    for (int i = 0; i < numCoords; i++) {
-        float temp = (objects[numObjs * i + objectId] - clusters[numClusters * i + clusterId]);
+    for (int i = 0; i < num_coordinates; i++) {
+        float temp = (objects[num_objs * i + objectId] - clusters[num_clusters * i + clusterId]);
         ans += pow(temp,2);
     }
     ans = sqrt(ans);
@@ -102,151 +102,151 @@ float euclid_dist_2(int numCoords, int numObjs, int numClusters, float *objects,
 }
 
 __global__ static
-void find_nearest_cluster(int numCoords, int numObjs, int numClusters, float *objects, float *deviceClusters, int *membership,
-                          int *intermediates){
+void find_nearest_cluster(int num_coordinates, int num_objs, int num_clusters, float *objects, float *dev_clusters, int *relationship,
+                          int *curr_temporaries){
     extern __shared__ char sharedMemory[];
 
-    unsigned char *membershipChanged = (unsigned char *)sharedMemory;
+    unsigned char *relationshipChanged = (unsigned char *)sharedMemory;
 
-    membershipChanged[threadIdx.x] = 0;
+    relationshipChanged[threadIdx.x] = 0;
 
     int objectId =  threadIdx.x + (blockDim.x * blockIdx.x);
 
-    if (objectId < numObjs) {
+    if (objectId < num_objs) {
         float min_dist;
         int index  = -1;
         min_dist = FLT_MAX;
-        float *clusters = deviceClusters;
-        for (int i=0; i<numClusters; i++) {
-            float dist = euclid_dist_2(numCoords, numObjs, numClusters,
+        float *clusters = dev_clusters;
+        for (int i=0; i<num_clusters; i++) {
+            float dist = cal_dist(num_coordinates, num_objs, num_clusters,
                                  objects, clusters, objectId, i);
             index = (dist < min_dist ? (min_dist = dist, i): index);
         }
 
-        if (membership[objectId] != index) {
-            membership[objectId] = index;
-            membershipChanged[threadIdx.x] = 1;
+        if (relationship[objectId] != index) {
+            relationship[objectId] = index;
+            relationshipChanged[threadIdx.x] = 1;
         }
 
         __syncthreads();
         unsigned int s = blockDim.x / 2;
         while(s > 0) {
-            membershipChanged[threadIdx.x] += ((threadIdx.x < s) ? membershipChanged[threadIdx.x + s] : 0);
+            relationshipChanged[threadIdx.x] += ((threadIdx.x < s) ? relationshipChanged[threadIdx.x + s] : 0);
             s >>= 1;
             __syncthreads();
         }
          
         if (!(threadIdx.x)) {
-            intermediates[blockIdx.x] = membershipChanged[0];
+            curr_temporaries[blockIdx.x] = relationshipChanged[0];
         }
     }
 }
 
 __global__ static
-void compute_delta(int *deviceIntermediates, int numIntermediates, int numIntermediates2){
+void compute_delta(int *devicetemporaries, int numtemporaries, int numtemporaries2){
     
-    numIntermediates2 >>= 1;
-    extern __shared__ unsigned int intermediates[];
+    numtemporaries2 >>= 1;
+    extern __shared__ unsigned int curr_temporaries[];
 
-    intermediates[threadIdx.x] =
-        ((threadIdx.x >= numIntermediates) ? 0 : deviceIntermediates[threadIdx.x]);
+    curr_temporaries[threadIdx.x] =
+        ((threadIdx.x >= numtemporaries) ? 0 : devicetemporaries[threadIdx.x]);
 
     __syncthreads();
     
-    unsigned int s =  numIntermediates2;
+    unsigned int s =  numtemporaries2;
     while(s > 0) {
-        intermediates[threadIdx.x] += ((threadIdx.x < s) ? intermediates[threadIdx.x + s] : 0);
+        curr_temporaries[threadIdx.x] += ((threadIdx.x < s) ? curr_temporaries[threadIdx.x + s] : 0);
         s >>= 1;
         __syncthreads();
     }
 
     if (!(threadIdx.x)) {
-        deviceIntermediates[0] = intermediates[0];
+        devicetemporaries[0] = curr_temporaries[0];
     }
 }
 
-float** cuda_kmeans(float **objects, int numCoords, int numObjs, int numClusters, int *membership){
+float** cuda_kmeans(float **objects, int num_coordinates, int num_objs, int num_clusters, int *relationship){
 
     float  **dimObjects;
-    malloc2D(dimObjects, numCoords, numObjs, float);
-    for (int i = 0; i < numCoords; i++) {
-        for (int j = 0; j < numObjs; j++) {
+    malloc2D(dimObjects, num_coordinates, num_objs, float);
+    for (int i = 0; i < num_coordinates; i++) {
+        for (int j = 0; j < num_objs; j++) {
             dimObjects[i][j] = objects[j][i];
         }
     }
 
-    float *deviceClusters;
+    float *dev_clusters;
     float  **dimClusters;
-    malloc2D(dimClusters, numCoords, numClusters, float);
-    for (int i = 0; i < numCoords; i++) {
-        for (int j = 0; j < numClusters; j++) {
+    malloc2D(dimClusters, num_coordinates, num_clusters, float);
+    for (int i = 0; i < num_coordinates; i++) {
+        for (int j = 0; j < num_clusters; j++) {
             dimClusters[i][j] = dimObjects[i][j];
         }
     }
 
-    memset(membership, -1, numObjs*sizeof(int));
+    memset(relationship, -1, num_objs*sizeof(int));
 
     int *newClusterSize; 
-    newClusterSize = (int*) calloc(numClusters, sizeof(int));
+    newClusterSize = (int*) calloc(num_clusters, sizeof(int));
 
     float  **newClusters;
-    malloc2D(newClusters, numCoords, numClusters, float);
-    memset(newClusters[0], 0, numCoords * numClusters * sizeof(float));
+    malloc2D(newClusters, num_coordinates, num_clusters, float);
+    memset(newClusters[0], 0, num_coordinates * num_clusters * sizeof(float));
 
     unsigned int numThreadsPerClusterBlock = 128;
     unsigned int numClusterBlocks =
-        (numObjs + numThreadsPerClusterBlock - 1) / numThreadsPerClusterBlock;
+        (num_objs + numThreadsPerClusterBlock - 1) / numThreadsPerClusterBlock;
 
     unsigned int clusterBlockSharedDataSize =
         numThreadsPerClusterBlock * sizeof(unsigned char);
 
     unsigned int numReductionThreads =
-        nextPowerOfTwo(numClusterBlocks);
+        cal_pow_2(numClusterBlocks);
     unsigned int reductionBlockSharedDataSize =
         numReductionThreads * sizeof(unsigned int);
 
 
-    float *deviceObjects;
-    int *deviceMembership;
-    int *deviceIntermediates;
+    float *dev_objs;
+    int *dev_relationship;
+    int *devicetemporaries;
 
-    cudaMalloc(&deviceObjects, numObjs*numCoords*sizeof(float));
-    cudaMalloc(&deviceClusters, numClusters*numCoords*sizeof(float));
-    cudaMalloc(&deviceMembership, numObjs*sizeof(int));
-    cudaMalloc(&deviceIntermediates, numReductionThreads*sizeof(unsigned int));
+    cudaMalloc(&dev_objs, num_objs*num_coordinates*sizeof(float));
+    cudaMalloc(&dev_clusters, num_clusters*num_coordinates*sizeof(float));
+    cudaMalloc(&dev_relationship, num_objs*sizeof(int));
+    cudaMalloc(&devicetemporaries, numReductionThreads*sizeof(unsigned int));
 
-    cudaMemcpy(deviceObjects, dimObjects[0], numObjs*numCoords*sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(deviceMembership, membership, numObjs*sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_objs, dimObjects[0], num_objs*num_coordinates*sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_relationship, relationship, num_objs*sizeof(int), cudaMemcpyHostToDevice);
 
     for(int loop = 0; loop < 500; loop++){
-        cudaMemcpy(deviceClusters, dimClusters[0], numClusters*numCoords*sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(dev_clusters, dimClusters[0], num_clusters*num_coordinates*sizeof(float), cudaMemcpyHostToDevice);
 
         find_nearest_cluster
             <<< numClusterBlocks, numThreadsPerClusterBlock, clusterBlockSharedDataSize >>>
-            (numCoords, numObjs, numClusters,
-             deviceObjects, deviceClusters, deviceMembership, deviceIntermediates);
+            (num_coordinates, num_objs, num_clusters,
+             dev_objs, dev_clusters, dev_relationship, devicetemporaries);
 
         cudaDeviceSynchronize();
 
         compute_delta <<< 1, numReductionThreads, reductionBlockSharedDataSize >>>
-            (deviceIntermediates, numClusterBlocks, numReductionThreads);
+            (devicetemporaries, numClusterBlocks, numReductionThreads);
 
         cudaDeviceSynchronize();
 
         int d;
-        cudaMemcpy(&d, deviceIntermediates, sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&d, devicetemporaries, sizeof(int), cudaMemcpyDeviceToHost);
         float delta = (float)d;
 
-        cudaMemcpy(membership, deviceMembership, numObjs*sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(relationship, dev_relationship, num_objs*sizeof(int), cudaMemcpyDeviceToHost);
 
-        for (int i=0; i<numObjs; i++) {
-            newClusterSize[membership[i]] += 1;
-            for (int j=0; j<numCoords; j++)
-                newClusters[j][membership[i]] += objects[i][j];
+        for (int i=0; i<num_objs; i++) {
+            newClusterSize[relationship[i]] += 1;
+            for (int j=0; j<num_coordinates; j++)
+                newClusters[j][relationship[i]] += objects[i][j];
         }
 
-        for (int i=0; i<numClusters; i++) {
-            for (int j=0; j<numCoords; j++) {
+        for (int i=0; i<num_clusters; i++) {
+            for (int j=0; j<num_coordinates; j++) {
                 if (newClusterSize[i] != 0)
                     dimClusters[j][i] = (newClusters[j][i] / (1.0*newClusterSize[i]));
                 newClusters[j][i] = 0;
@@ -260,9 +260,9 @@ float** cuda_kmeans(float **objects, int numCoords, int numObjs, int numClusters
     }   
 
     float  **clusters;
-    malloc2D(clusters, numClusters, numCoords, float);
-    for (int i = 0; i < numClusters; i++) {
-        for (int j = 0; j < numCoords; j++) {
+    malloc2D(clusters, num_clusters, num_coordinates, float);
+    for (int i = 0; i < num_clusters; i++) {
+        for (int j = 0; j < num_coordinates; j++) {
             clusters[i][j] = dimClusters[j][i];
         }
     }
@@ -271,21 +271,21 @@ float** cuda_kmeans(float **objects, int numCoords, int numObjs, int numClusters
 }
 
 int main(int argc, char **argv) {
-           int     opt;
+   int     opt;
 
-           int     numClusters, numCoords, numObjs;
-           int    *membership;
-           char   *filename;
-           float **objects;
-           float **clusters;
-    numClusters      = 0;
+   int     num_clusters, num_coordinates, num_objs;
+   int    *relationship;
+   char   *filename;
+   float **objects;
+   float **clusters;
+    num_clusters      = 0;
     filename         = NULL;
 
     while ( (opt=getopt(argc,argv,"p:i:n:t:abdo"))!= EOF) {
         switch (opt) {
             case 'i': filename=optarg;
                       break;
-            case 'n': numClusters = atoi(optarg);
+            case 'n': num_clusters = atoi(optarg);
                   break;
             case '?': 
                       break;
@@ -295,17 +295,17 @@ int main(int argc, char **argv) {
     }
     struct timeval tvalBefore, tvalAfter;
 
-    objects = file_read(filename, &numObjs, &numCoords);
-    membership = (int*) malloc(numObjs * sizeof(int));
+    objects = file_read(filename, &num_objs, &num_coordinates);
+    relationship = (int*) malloc(num_objs * sizeof(int));
     gettimeofday (&tvalBefore, NULL);
 
-    clusters = cuda_kmeans(objects, numCoords, numObjs, numClusters,
-                          membership);
+    clusters = cuda_kmeans(objects, num_coordinates, num_objs, num_clusters,
+                          relationship);
     gettimeofday (&tvalAfter, NULL);
 
-    printf("numObjs       = %d\n", numObjs);
-    printf("numCoords     = %d\n", numCoords);
-    printf("numClusters   = %d\n", numClusters);
+    printf("num_objs       = %d\n", num_objs);
+    printf("num_coordinates     = %d\n", num_coordinates);
+    printf("num_clusters   = %d\n", num_clusters);
 
     printf("Time: %ld microseconds\n",
         ((tvalAfter.tv_sec - tvalBefore.tv_sec)*1000000L
